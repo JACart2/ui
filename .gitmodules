@@ -1,0 +1,4 @@
+[submodule "public/font-glyphs"]
+	path = public/font-glyphs
+	url = git@github.com:orangemug/font-glyphs.git
+	branch = gh-pages
