@@ -6,7 +6,7 @@ A user interface for autonomous navigation of a JACART.
 - [Maplibre](https://maplibre.org/): for rendering the map
 - [React Map GL](https://visgl.github.io/react-map-gl/): react wrapper for Maplibre
 - [OpenStreetMap](https://www.openstreetmap.org/#map=17/38.43711/-78.87157): Current map data was directly exported from OpenStreetMap
-- [OSM Liberty](https://github.com/maputnik/osm-liberty): Open Source style for the map. Copied in modified in (public/osm-liberty/)[public/osm-liberty/]
+- [OSM Liberty](https://github.com/maputnik/osm-liberty): Open Source style for the map. Copied and modified in [public/osm-liberty/](public/osm-liberty/)
 - [pmtiles](https://www.npmjs.com/package/pmtiles): Provides protocol that enables loading map from a singular static file.
 - [Tilemaker](https://github.com/systemed/tilemaker/): Convert .osm.pbf file to .pmtiles
 - [Osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert): Convert .osm (exported from OSM) file to .osm.pbf
