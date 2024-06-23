@@ -1,27 +1,19 @@
-# React + TypeScript + Vite
+# JACart2 / ui
+A user interface for autonomous navigation of a JACART.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Important Tools/Libraries Used
+- [React](https://react.dev/): for implementing ui elements declaratively.
+- [Maplibre](https://maplibre.org/): for rendering the map
+- [React Map GL](https://visgl.github.io/react-map-gl/): react wrapper for Maplibre
+- [OpenStreetMap](https://www.openstreetmap.org/#map=17/38.43711/-78.87157): Current map data was directly exported from OpenStreetMap
+- [OSM Liberty](https://github.com/maputnik/osm-liberty): Open Source style for the map. Copied in modified in (public/osm-liberty/)[public/osm-liberty/]
+- [pmtiles](https://www.npmjs.com/package/pmtiles): Provides protocol that enables loading map from a singular static file.
+- [Tilemaker](https://github.com/systemed/tilemaker/): Convert .osm.pbf file to .pmtiles
+- [Osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert): Convert .osm (exported from OSM) file to .osm.pbf
 
-Currently, two official plugins are available:
+# Prerequisites
+- [Node.js](https://nodejs.org/en)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-   },
-```
-
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+# Installation & Running
+`npm install`
+`npm run dev`
