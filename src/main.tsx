@@ -35,6 +35,7 @@ let map = new maplibregl.Map({
 });
 
 
+
 let nav = new maplibregl.NavigationControl();
 map.addControl(nav, 'top-left');
 
@@ -134,10 +135,10 @@ visual_path.subscribe(function({markers}){
 	map.getSource('visual_path').setData(LineString(visual_path_coordinates));
 });
 
-let clicked_point = new ROSLIB.Topic({
+let gps_request = new ROSLIB.Topic({
   ros : ros,
-  name : '/clicked_point',
-  messageType : 'geometry_msgs/msg/PointStamped'
+  name : '/gps_request',
+  messageType : 'navigation_interface/msg/LatLongPoint'
 });
 
 limited_pose.subscribe(function(message){
@@ -206,15 +207,13 @@ map.addLayer({
 // When a click event occurs on a feature in the places layer, open a popup at the
         // location of the feature, with description HTML from its properties.
         map.on('click', 'graph_visual', (e) => {
-        	const [x,y] = Y(e.lngLat); 
+		const {lat,lng} = e.lngLat;
 let target = new ROSLIB.Message({
-  point : {
-    x : x,
-    y : y,
-    z : 0
-  }
+latitude: lat,
+longitude: lng,
+elevation: 0
 });
-clicked_point.publish(target);
+gps_request.publish(target);
 
 
 	    });
