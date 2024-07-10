@@ -141,6 +141,7 @@ let clicked_point = new ROSLIB.Topic({
   messageType : 'geometry_msgs/msg/PointStamped'
 });
 
+let last_pos = [0,0];
 limited_pose.subscribe(function(message){
 	let [x1,y1] =T(message.pose.position);
 	let source = map.getSource('limited_pose').setData(point(x1,y1));
@@ -156,9 +157,18 @@ limited_pose.subscribe(function(message){
 				closestDist = dist;
 			};
 		}
-
+		let [x2,y2] = last_pos;
+		const delta = Math.sqrt(Math.pow(x1-x2,2)+ Math.pow(y1-y2,2));
+	    console.log(delta>0.0000001);
+	    map.flyTo({
+		center: [x1,y1],
+		speed: 0.5,
+	    	zoom: 18
+	    });
 		map.getSource('remaining_path').setData(LineString(visual_path_coordinates.slice(closestInd)));
 	}
+
+	last_pos = [x1,y1];
 });
 
 graph_visual.subscribe(function({markers}) {
