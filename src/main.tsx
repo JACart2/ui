@@ -63,7 +63,7 @@ let point= (x,y)=> ({
 		}
 		});
 
-const image = await map.loadImage('https://maplibre.org/maplibre-gl-js/docs/assets/osgeo-logo.png');
+const image = await map.loadImage('osgeo-logo.png');
         map.addImage('custom-marker', image.data);
 map.addSource('limited_pose', {
             'type': 'geojson',
@@ -135,10 +135,10 @@ visual_path.subscribe(function({markers}){
 	map.getSource('visual_path').setData(LineString(visual_path_coordinates));
 });
 
-let gps_request = new ROSLIB.Topic({
+let clicked_point = new ROSLIB.Topic({
   ros : ros,
-  name : '/gps_request',
-  messageType : 'navigation_interface/msg/LatLongPoint'
+  name : '/clicked_point',
+  messageType : 'geometry_msgs/msg/PointStamped'
 });
 
 limited_pose.subscribe(function(message){
@@ -207,13 +207,11 @@ map.addLayer({
 // When a click event occurs on a feature in the places layer, open a popup at the
         // location of the feature, with description HTML from its properties.
         map.on('click', 'graph_visual', (e) => {
-		const {lat,lng} = e.lngLat;
+	const [x,y] = Y(e.lngLat);
 let target = new ROSLIB.Message({
-latitude: lat,
-longitude: lng,
-elevation: 0
+	point:{x,y,z:0}
 });
-gps_request.publish(target);
+clicked_point.publish(target);
 
 
 	    });
