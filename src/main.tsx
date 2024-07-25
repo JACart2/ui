@@ -21,8 +21,8 @@ let visual_path = new ROSLIB.Topic({
 
 let limited_pose = new ROSLIB.Topic({
 	ros:ros,
-	name: '/limited_pose',
-	messageType: 'geometry_msgs/msg/PoseStamped'
+	name: '/pcl_pose',
+	messageType: 'geometry_msgs/msg/PoseWithCovarianceStamped'
 });
 let vehicle_state = new ROSLIB.Topic({
 	ros:ros,
@@ -140,20 +140,19 @@ visual_path.subscribe(function({markers}){
 	map.getSource('visual_path').setData(LineString(visual_path_coordinates));
 });
 
-let gps_request = new ROSLIB.Topic({
+let clicked_point = new ROSLIB.Topic({
   ros : ros,
-  name : '/gps_request',
-  messageType : 'navigation_interface/msg/LatLongPoint'
+  name : '/clicked_point',
+  messageType : 'geometry_msgs/msg/PointStamped'
 });
 
 
 function navigateTo(lat,lng){
+	const [x,y] = Y({lat,lng});
 	let target = new ROSLIB.Message({
-		latitude: lat,
-		longitude: lng,
-		elevation: 0
+		point:{x,y,z:0}
 	});
-	gps_request.publish(target);
+	clicked_point.publish(target);
 
 
 }
@@ -177,6 +176,10 @@ function setStopped(value){
 
 const goButton = document.getElementById("go");
 const pullOverButton = document.getElementById("pull-over");
+goButton.hidden = true;
+pullOverButton.hidden = true;
+
+
 let state = {
   "is_navigating": false,
   "reached_destination": true,
@@ -223,15 +226,13 @@ vehicle_state.subscribe(function(message){
 		//map.getSource('visual_path').setData(LineString([]));
 	}
 
-	goButton.hidden=!message.stopped || !message.is_navigating;
-	pullOverButton.hidden=message.stopped || !message.is_navigating;
-
-
+//	goButton.hidden=!message.stopped || !message.is_navigating;
+//	pullOverButton.hidden=message.stopped || !message.is_navigating;
 });
 
 
 limited_pose.subscribe(function(message){
-	let [x1,y1] =T(message.pose.position);
+	let [x1,y1] =T(message.pose.pose.position);
 	let source = map.getSource('limited_pose').setData(point(x1,y1));
 
 	if(visual_path_coordinates.length>0 && state.is_navigating){
