@@ -68,7 +68,7 @@ let point= (x,y)=> ({
 		}
 		});
 
-const image = await map.loadImage('https://maplibre.org/maplibre-gl-js/docs/assets/osgeo-logo.png');
+const image = await map.loadImage('osgeo-logo.png');
         map.addImage('custom-marker', image.data);
 map.addSource('limited_pose', {
             'type': 'geojson',
