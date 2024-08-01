@@ -167,14 +167,6 @@ function setStopped(value){
 
 
 }
-// parseFloat([...document.getElementById("destinations").getElementsByTagName("li")][0].getAttribute("lat"))
-
-const goButton = document.getElementById("go");
-const pullOverButton = document.getElementById("pull-over");
-goButton.hidden = true;
-pullOverButton.hidden = true;
-
-
 let state = {
   "is_navigating": false,
   "reached_destination": true,
@@ -196,18 +188,6 @@ let state = {
 		el.classList.add("selected");
 		}
 	});
-});
-
-
-pullOverButton.addEventListener("click", ()=>{
-	console.log("PullOver clicked");
-	setStopped(true);
-	
-});
-goButton.addEventListener("click", ()=>{
-	console.log("Go clicked");
-	setStopped(false);
-	
 });
 
 
