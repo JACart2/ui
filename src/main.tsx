@@ -3,28 +3,7 @@ import { Protocol } from 'pmtiles';
 import maplibregl from 'maplibre-gl';
 import * as ROSLIB from 'roslib';
 import { Matrix, inverse } from 'ml-matrix';
-
-var ros = new ROSLIB.Ros({
-  url : 'ws://localhost:9090'
-});
-
-let visual_path = new ROSLIB.Topic({
-	ros:ros,
-	name: '/visual_path',
-	messageType: 'visualization_msgs/msg/MarkerArray'
-});
-
-let limited_pose = new ROSLIB.Topic({
-	ros:ros,
-	name: '/pcl_pose',
-	messageType: 'geometry_msgs/msg/PoseWithCovarianceStamped'
-});
-let vehicle_state = new ROSLIB.Topic({
-	ros:ros,
-	name: '/vehicle_state',
-	messageType: 'navigation_interface/msg/VehicleState'
-});
-
+import {clicked_point, vehicle_state, visual_path, limited_pose} from './topics';
 
 
 let protocol = new Protocol();
@@ -135,13 +114,6 @@ visual_path.subscribe(function({markers}){
 	map.getSource('visual_path').setData(LineString(visual_path_coordinates));
 });
 
-let clicked_point = new ROSLIB.Topic({
-  ros : ros,
-  name : '/clicked_point',
-  messageType : 'geometry_msgs/msg/PointStamped'
-});
-
-
 function navigateTo(lat,lng){
 	const [x,y] = Y({lat,lng});
 	let target = new ROSLIB.Message({
@@ -151,28 +123,6 @@ function navigateTo(lat,lng){
 
 
 }
-let stop = new ROSLIB.Topic({
-  ros : ros,
-  name : '/stop',
-  messageType : 'navigation_interface/msg/Stop'
-});
-
-
-function setStopped(value){
-	let msg = new ROSLIB.Message({
-		stop: value,
-		distance: 5
-	});
-	stop.publish(msg);
-
-
-}
-let state = {
-  "is_navigating": false,
-  "reached_destination": true,
-  "stopped": false
-};
-
 [...document.getElementById("destinations").getElementsByTagName("li")].forEach((el)=>{
 	const lat = parseFloat(el.getAttribute("lat"));
 	const long = parseFloat(el.getAttribute("long"));
