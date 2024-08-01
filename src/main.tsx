@@ -8,11 +8,6 @@ var ros = new ROSLIB.Ros({
   url : 'ws://localhost:9090'
 });
 
-let graph_visual = new ROSLIB.Topic({
-  ros : ros,
-  name : '/graph_visual',
-  messageType : 'visualization_msgs/msg/MarkerArray'
-});
 let visual_path = new ROSLIB.Topic({
 	ros:ros,
 	name: '/visual_path',
@@ -222,12 +217,7 @@ vehicle_state.subscribe(function(message){
 	if(message.reached_destination){
 		
 		map.getSource('remaining_path').setData(LineString([]));
-
-		//map.getSource('visual_path').setData(LineString([]));
 	}
-
-//	goButton.hidden=!message.stopped || !message.is_navigating;
-//	pullOverButton.hidden=message.stopped || !message.is_navigating;
 });
 
 
@@ -256,41 +246,6 @@ limited_pose.subscribe(function(message){
 	}
 });
 
-//graph_visual.subscribe(function({markers}) {
-//
-//	let arrows = markers.filter(({type})=>type==0);
-//	map.addSource('graph_visual', {
-//		'type':'geojson',
-//		'data':{
-//			'type':'Feature',
-//			'geometry':{
-//				'type':'MultiLineString',
-//				'coordinates': arrows.map(({points})=>points.map(T))
-//			}
-//		}
-//	});
-//	map.addLayer({
-//		'id':'graph_visual',
-//		'type':'line',
-//		'source':'graph_visual',
-//		'layout': {
-//                'line-join': 'round',
-//                'line-cap': 'round'
-//            },
-//            'paint': {
-//                'line-color': '#000',
-//		'line-opacity': 0.03,
-//                "line-width": {
-//          "base": 1.4,
-//          "stops": [
-//            [14, 0],
-//            [20, 18]
-//          ]
-//        }
-//            }
-//	});
-//
-//});
 map.addLayer({
             'id': 'limited_pose',
             'type': 'symbol',
@@ -299,21 +254,5 @@ map.addLayer({
                 'icon-image': 'custom-marker',
             }
         });
-//// When a click event occurs on a feature in the places layer, open a popup at the
-//        // location of the feature, with description HTML from its properties.
-//        map.on('click', 'graph_visual', (e) => {
-//		const {lat,lng} = e.lngLat;
-//		navigateTo(lat,lng);
-//	    });
-//
-//        // Change the cursor to a pointer when the mouse is over the places layer.
-//        map.on('mouseenter', 'graph_visual', () => {
-//            map.getCanvas().style.cursor = 'pointer';
-//        });
-//
-//        // Change it back to a pointer when it leaves.
-//        map.on('mouseleave', 'graph_visual', () => {
-//            map.getCanvas().style.cursor = '';
-//        });
 });
 
