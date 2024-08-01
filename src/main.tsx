@@ -9,7 +9,8 @@ import {
   limited_pose,
 } from "./topics";
 import { T, Y } from "./transform";
-
+import locations from "./locations.json";
+console.log(locations);
 let protocol = new Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 let map = new maplibregl.Map({
@@ -96,7 +97,6 @@ map.on("load", async () => {
       },
     },
   });
-
   let visual_path_coordinates = [];
   visual_path.subscribe(function ({ markers }) {
     visual_path_coordinates = markers.map((m) => T(m.pose.position));
@@ -110,12 +110,18 @@ map.on("load", async () => {
     });
     clicked_point.publish(target);
   }
-  [
-    ...document.getElementById("destinations").getElementsByTagName("li"),
-  ].forEach((el) => {
-    const lat = parseFloat(el.getAttribute("lat"));
-    const long = parseFloat(el.getAttribute("long"));
-    el.addEventListener("click", () => {
+
+  let state = {
+    is_navigating: false,
+    reached_destination: true,
+    stopped: false,
+  };
+
+  locations.forEach(({ lat, long, name }) => {
+    const li = document.createElement("li");
+    li.innerText = name;
+    destinations.appendChild(li);
+    li.addEventListener("click", () => {
       console.log(lat, long);
       if (!state.is_navigating) {
         navigateTo(lat, long);
@@ -125,9 +131,10 @@ map.on("load", async () => {
           el2.classList.remove("selected");
         });
 
-        el.classList.add("selected");
+        li.classList.add("selected");
       }
     });
+
   });
 
   vehicle_state.subscribe(function (message) {
