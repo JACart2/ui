@@ -1,6 +1,6 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Protocol } from "pmtiles";
-import maplibregl from "maplibre-gl";
+import maplibregl, { Marker, Popup } from "maplibre-gl";
 import * as ROSLIB from "roslib";
 import {
   clicked_point,
@@ -11,6 +11,17 @@ import {
 import { T, Y } from "./transform";
 import locations from "./locations.json";
 console.log(locations);
+
+const PIN_COLORS = [
+  'red',
+  'blue',
+  'orange',
+  'green',
+  'purple',
+  'pink',
+  'skyblue'
+]
+
 let protocol = new Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 let map = new maplibregl.Map({
@@ -23,8 +34,10 @@ let map = new maplibregl.Map({
 let nav = new maplibregl.NavigationControl();
 map.addControl(nav, "top-left");
 
+let locationPins: Marker[] = [];
+
 map.on("load", async () => {
-  let point = (x, y) => ({
+  let point = (x: number, y: number): any => ({
     type: "Feature",
     geometry: {
       type: "Point",
@@ -34,7 +47,7 @@ map.on("load", async () => {
 
   const image = await map.loadImage("osgeo-logo.png");
   map.addImage("custom-marker", image.data);
-  function LineString(coordinates) {
+  function LineString(coordinates: number[]): any {
     return {
       type: "Feature",
       geometry: {
@@ -56,6 +69,7 @@ map.on("load", async () => {
     type: "geojson",
     data: LineString([]),
   });
+
 
   map.addLayer({
     id: "visual_path",
@@ -97,13 +111,14 @@ map.on("load", async () => {
       },
     },
   });
-  let visual_path_coordinates = [];
+  let visual_path_coordinates: number[] = [];
   visual_path.subscribe(function ({ markers }) {
     visual_path_coordinates = markers.map((m) => T(m.pose.position));
-    map.getSource("visual_path").setData(LineString(visual_path_coordinates));
+    map.getSource("visual_path")?.setData(LineString(visual_path_coordinates));
   });
 
-  function navigateTo(lat, lng) {
+  function navigateTo(lat: number, lng: number) {
+    console.log(lat, lng);
     const [x, y] = Y({ lat, lng });
     let target = new ROSLIB.Message({
       point: { x, y, z: 0 },
@@ -117,17 +132,17 @@ map.on("load", async () => {
     stopped: false,
   };
 
-  locations.forEach(({ lat, long, name }) => {
+  // Dynamically populate Destinations list with data from locations.json
+  locations.forEach(({ lat, long, name }, index) => {
     const li = document.createElement("li");
     li.innerText = name;
     destinations.appendChild(li);
     li.addEventListener("click", () => {
-      console.log(lat, long);
       if (!state.is_navigating) {
         navigateTo(lat, long);
-        [
-          ...document.getElementById("destinations").getElementsByTagName("li"),
-        ].forEach((el2) => {
+
+        // Remove 'selected' class from all destinations, then apply to current one
+        [ ...document.getElementById("destinations").getElementsByTagName("li") ].forEach((el2) => {
           el2.classList.remove("selected");
         });
 
@@ -135,9 +150,33 @@ map.on("load", async () => {
       }
     });
 
+    let popup = new Popup({
+      anchor: 'bottom',
+      className: 'location-popup',
+      closeButton: false,
+      closeOnClick: false,
+      closeOnMove: false,
+    })
+    .setText(name)
+    .addTo(map);
+
+    let marker = new Marker({ color: PIN_COLORS[index] })
+      .setLngLat([long, lat])
+      .setPopup(popup)
+      .addTo(map);
+
+    marker.togglePopup();
+    marker.getElement().addEventListener('click', (e) => {
+      e.stopPropagation();
+      popup.addTo(map);
+    });
+
+    locationPins.push(marker);
+
+
   });
 
-  vehicle_state.subscribe(function (message) {
+  vehicle_state.subscribe(function (message: any) {
     state = message;
     console.log(message);
     if (message.reached_destination) {
