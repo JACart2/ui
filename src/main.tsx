@@ -169,6 +169,17 @@ map.on("load", async () => {
     marker.getElement().addEventListener('click', (e) => {
       e.stopPropagation();
       popup.addTo(map);
+
+      if (!state.is_navigating) {
+        navigateTo(lat, long);
+
+        // Remove 'selected' class from all destinations, then apply to current one
+        [ ...document.getElementById("destinations").getElementsByTagName("li") ].forEach((el2) => {
+          el2.classList.remove("selected");
+        });
+
+        li.classList.add("selected");
+      }
     });
 
     locationPins.push(marker);
