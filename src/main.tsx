@@ -133,59 +133,50 @@ map.on("load", async () => {
   };
 
   // Dynamically populate Destinations list with data from locations.json
-  locations.forEach(({ lat, long, name }, index) => {
-    const li = document.createElement("li");
-    li.innerText = name;
-    destinations.appendChild(li);
-    li.addEventListener("click", () => {
-      if (!state.is_navigating) {
-        navigateTo(lat, long);
+  const destinationsList = document.getElementById("destinations");
+  if (destinationsList) {
+    locations.forEach(({ lat, long, name }, index) => {
+      const li = document.createElement("li");
+      li.innerText = name;
+      destinationsList.appendChild(li);
+      li.addEventListener("click", () => {
+        if (!state.is_navigating) {
+          navigateTo(lat, long);
+          selectDestinationListItem(li);
+        }
+      });
 
-        // Remove 'selected' class from all destinations, then apply to current one
-        [ ...document.getElementById("destinations").getElementsByTagName("li") ].forEach((el2) => {
-          el2.classList.remove("selected");
-        });
-
-        li.classList.add("selected");
-      }
-    });
-
-    let popup = new Popup({
-      anchor: 'bottom',
-      className: 'location-popup',
-      closeButton: false,
-      closeOnClick: false,
-      closeOnMove: false,
-    })
-    .setText(name)
-    .addTo(map);
-
-    let marker = new Marker({ color: PIN_COLORS[index] })
-      .setLngLat([long, lat])
-      .setPopup(popup)
+      const popup = new Popup({
+        anchor: 'bottom',
+        className: 'location-popup',
+        closeButton: false,
+        closeOnClick: false,
+        closeOnMove: false,
+      })
+      .setText(name)
       .addTo(map);
 
-    marker.togglePopup();
-    marker.getElement().addEventListener('click', (e) => {
-      e.stopPropagation();
-      popup.addTo(map);
+      const marker = new Marker({ color: PIN_COLORS[index] })
+        .setLngLat([long, lat])
+        .setPopup(popup)
+        .addTo(map);
 
-      if (!state.is_navigating) {
-        navigateTo(lat, long);
+      marker.togglePopup();
+      marker.getElement().addEventListener('click', (e) => {
+        e.stopPropagation();
+        popup.addTo(map);
 
-        // Remove 'selected' class from all destinations, then apply to current one
-        [ ...document.getElementById("destinations").getElementsByTagName("li") ].forEach((el2) => {
-          el2.classList.remove("selected");
-        });
+        if (!state.is_navigating) {
+          navigateTo(lat, long);
+          selectDestinationListItem(li);
+        }
+      });
 
-        li.classList.add("selected");
-      }
+      locationPins.push(marker);
+
+
     });
-
-    locationPins.push(marker);
-
-
-  });
+  }
 
   vehicle_state.subscribe(function (message: any) {
     state = message;
@@ -231,3 +222,15 @@ map.on("load", async () => {
     },
   });
 });
+
+function selectDestinationListItem(item: HTMLLIElement) {
+  const destinationsList = document.getElementById("destinations");
+  if (!destinationsList) return;
+
+  // Remove 'selected' class from all destinations, then apply to current one
+  [ ...destinationsList.getElementsByTagName("li") ].forEach((el2) => {
+    el2.classList.remove("selected");
+  });
+
+  item.classList.add("selected");
+}
