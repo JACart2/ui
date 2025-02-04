@@ -14,6 +14,7 @@ export const limited_pose = new ROSLIB.Topic({
   name: "/pcl_pose",
   messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
 });
+
 export const vehicle_state = new ROSLIB.Topic({
   ros: ros,
   name: "/vehicle_state",

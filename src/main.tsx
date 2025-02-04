@@ -1,6 +1,8 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Protocol } from "pmtiles";
-import maplibregl, { Marker, Popup } from "maplibre-gl";
+import maplibregl, { GeoJSONSource, Marker, Popup } from "maplibre-gl";
+import GeoJSON, { Position } from "geojson";
+type GeoJSON = GeoJSON.GeoJSON
 import * as ROSLIB from "roslib";
 import {
   clicked_point,
@@ -8,8 +10,9 @@ import {
   visual_path,
   limited_pose,
 } from "./topics";
-import { T, Y } from "./transform";
+import { rosToMapCoords, lngLatToMapCoords } from "./transform";
 import locations from "./locations.json";
+import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTypes";
 console.log(locations);
 
 const PIN_COLORS = [
@@ -22,38 +25,40 @@ const PIN_COLORS = [
   'skyblue'
 ]
 
-let protocol = new Protocol();
+const protocol = new Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
-let map = new maplibregl.Map({
+const map = new maplibregl.Map({
   container: "map",
   style: "osm-liberty/style.json",
   center: [-78.869914, 38.435491],
   zoom: 16,
 });
 
-let nav = new maplibregl.NavigationControl();
+const nav = new maplibregl.NavigationControl();
 map.addControl(nav, "top-left");
 
-let locationPins: Marker[] = [];
+const locationPins: Marker[] = [];
 
 map.on("load", async () => {
-  let point = (x: number, y: number): any => ({
+  const point = (x: number, y: number): GeoJSON => ({
     type: "Feature",
     geometry: {
       type: "Point",
       coordinates: [x, y],
     },
+    properties: {}
   });
 
   const image = await map.loadImage("osgeo-logo.png");
   map.addImage("custom-marker", image.data);
-  function LineString(coordinates: number[]): any {
+  function LineString(coordinates: Position[]): GeoJSON {
     return {
       type: "Feature",
       geometry: {
         type: "LineString",
         coordinates: coordinates,
       },
+      properties: {}
     };
   }
   map.addSource("limited_pose", {
@@ -82,13 +87,13 @@ map.on("load", async () => {
     paint: {
       "line-color": "#bdcff0", // '#6495ED',
       "line-opacity": 1,
-      "line-width": {
-        base: 1.4,
-        stops: [
-          [14, 0],
-          [20, 18],
-        ],
-      },
+      "line-width": [
+        "interpolate",
+        ["exponential", 1.4],
+        ["zoom"],
+        14, 0,
+        20, 18
+      ],
     },
   });
   map.addLayer({
@@ -102,31 +107,34 @@ map.on("load", async () => {
     paint: {
       "line-color": "#6495ED",
       "line-opacity": 1,
-      "line-width": {
-        base: 1.4,
-        stops: [
-          [14, 0],
-          [20, 18],
-        ],
-      },
+      "line-width": [
+        "interpolate",
+        ["exponential", 1.4],
+        ["zoom"],
+        14, 0,
+        20, 18
+      ],
     },
   });
-  let visual_path_coordinates: number[] = [];
-  visual_path.subscribe(function ({ markers }) {
-    visual_path_coordinates = markers.map((m) => T(m.pose.position));
-    map.getSource("visual_path")?.setData(LineString(visual_path_coordinates));
+  let visual_path_coordinates: number[][] = [];
+
+  visual_path.subscribe((message: ROSLIB.Message) => {
+    const markers = message as ROSMarker[];
+    visual_path_coordinates = markers.map((m) => rosToMapCoords(m.pose.position));
+    const source = map.getSource("visual_path") as GeoJSONSource;
+    source.setData(LineString(visual_path_coordinates));
   });
 
   function navigateTo(lat: number, lng: number) {
     console.log(lat, lng);
-    const [x, y] = Y({ lat, lng });
-    let target = new ROSLIB.Message({
+    const [x, y] = lngLatToMapCoords({ lat, lng });
+    const target = new ROSLIB.Message({
       point: { x, y, z: 0 },
     });
     clicked_point.publish(target);
   }
 
-  let state = {
+  let state: VehicleState = {
     is_navigating: false,
     reached_destination: true,
     stopped: false,
@@ -178,17 +186,20 @@ map.on("load", async () => {
     });
   }
 
-  vehicle_state.subscribe(function (message: any) {
-    state = message;
+  vehicle_state.subscribe((message: ROSLIB.Message) => {
+    state = message as VehicleState;
     console.log(message);
-    if (message.reached_destination) {
-      map.getSource("remaining_path").setData(LineString([]));
+    if (state.reached_destination) {
+      const source = map.getSource("remaining_path") as GeoJSONSource;
+      source.setData(LineString([]));
     }
   });
 
-  limited_pose.subscribe(function (message) {
-    let [x1, y1] = T(message.pose.pose.position);
-    let source = map.getSource("limited_pose").setData(point(x1, y1));
+  limited_pose.subscribe(function (message: ROSLIB.Message) {
+    const poseWithCovariance = message as PoseWithCovarianceStamped;
+    const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.position);
+    const source = map.getSource("limited_pose") as GeoJSONSource;
+    source.setData(point(x1, y1));
 
     if (visual_path_coordinates.length > 0 && state.is_navigating) {
       let closestInd = 0;
@@ -202,9 +213,8 @@ map.on("load", async () => {
         }
       }
 
-      map
-        .getSource("remaining_path")
-        .setData(LineString(visual_path_coordinates.slice(closestInd)));
+      const source = map.getSource("remaining_path") as GeoJSONSource;
+      source.setData(LineString(visual_path_coordinates.slice(closestInd)));
 
       map.flyTo({
         center: [x1, y1],
