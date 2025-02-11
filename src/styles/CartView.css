@@ -1,0 +1,48 @@
+#split {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    width: 100vw;
+}
+
+#split2 {
+    display: flex;
+    font-family: Arial;
+    flex-direction: column;
+}
+
+h2 {
+    padding-left: 1rem;
+}
+
+#map {
+    flex: 1;
+    height: 100%;
+}
+
+#destinations {
+    flex: 1;
+    width: 20rem;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.destination-item {
+    padding: 1rem;
+    border-bottom: 1px solid lightgrey;
+    user-select: none;
+    cursor: pointer;
+}
+
+ul#destinations li {
+    cursor: pointer;
+}
+
+.selected {
+    background: #6495ed;
+}
+
+.location-popup .maplibregl-popup-content {
+    padding: 2px 4px;
+}
