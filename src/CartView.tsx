@@ -62,7 +62,7 @@ export default function CartView() {
         maplibregl.addProtocol("pmtiles", protocol.tile);
         map.current = new maplibregl.Map({
             container: mapRef.current,
-            style: "../basic_map.json",
+            style: "/basic_map.json",
             center: [-78.861814, 38.433129],
             zoom: 16,
         });
