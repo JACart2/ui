@@ -3,7 +3,7 @@ import { Content, Header } from "antd/es/layout/layout";
 import { useNavigate } from 'react-router-dom';
 import "./styles/Dashboard.css"
 
-import { FaCarSide, FaLocationCrosshairs } from "react-icons/fa6";
+import { FaCarSide, FaLocationArrow, FaLocationCrosshairs, FaLocationDot, FaRightLong } from "react-icons/fa6";
 import { useEffect, useRef } from "react";
 import { Protocol } from "pmtiles";
 import maplibregl, { Marker } from "maplibre-gl";
@@ -21,15 +21,19 @@ export default function Dashboard() {
             name: 'James',
             speed: 3,
             tripProgress: 75,
-            lat: 38.434257,
-            long: -78.864156
+            lat: 38.433347,
+            long: -78.863156,
+            start: 'Chesapeake Hall',
+            stop: 'Front of King Hall'
         },
         {
             name: 'Madison',
             speed: 6,
             tripProgress: 20,
-            lat: 38.431657,
-            long: -78.860881
+            lat: 38.431957,
+            long: -78.860981,
+            start: 'E-Hall',
+            stop: 'Festival'
         },
     ]
 
@@ -91,28 +95,38 @@ export default function Dashboard() {
         <Layout className="dashboard-container">
             <Header><h1 style={{ color: 'white' }}>JACart Dashboard</h1></Header>
             <Content>
-                <Flex vertical justify="space-evenly" className="fill-height">
-                    <div ref={mapRef} id="map"></div>
-                    <Flex className="dashboard-cards" wrap gap="middle" justify="center">
+                <Flex className="fill-height">
+                    <Flex className="dashboard-cards" vertical gap="middle" justify="flex-start">
 
                         {carts.map((cart, index) => (
                             <Card className="dashboard-card" onClick={() => navigate('/')} title={
+                                // Card title (icon, name, locate button)
                                 <Flex className='card-title' justify="space-between">
                                     <Flex className='card-title'><FaCarSide /> <span>{cart.name}</span></Flex>
                                     <Button className="cart-locate-button" onClick={($event) => flyToCart(index, $event)} icon={<FaLocationCrosshairs />} shape="circle"></Button>
                                 </Flex>
                             }>
+                                { /* Card body */}
                                 <Flex vertical gap="large">
-                                    <div>
-                                        <span>Trip Progress</span>
-                                        <Progress type="line" percent={cart.tripProgress} />
-                                    </div>
-                                    <Progress type="dashboard" percent={speedToPercent(cart.speed)} format={() => `${cart.speed} mph`} style={{ margin: '0 auto' }} />
 
+                                    <div>
+                                        <span style={{ fontWeight: 'bold' }}>Trip Progress</span>
+                                        <Progress type="line" percent={cart.tripProgress} />
+                                        <Flex align="center" style={{ gap: '4px' }}>
+                                            <FaLocationArrow color="blue" />
+                                            <span>{cart.start}</span>
+                                            <FaRightLong style={{ margin: '0 8px', opacity: 0.6 }} />
+                                            <FaLocationDot color="#E04A3A" />
+                                            <span>{cart.stop}</span>
+                                        </Flex>
+                                    </div>
+
+                                    <Progress className="margin-center" type="dashboard" percent={speedToPercent(cart.speed)} format={() => `${cart.speed} mph`} />
                                 </Flex>
                             </Card>
                         ))}
                     </Flex>
+                    <div ref={mapRef} id="map"></div>
                 </Flex>
             </Content>
         </Layout>

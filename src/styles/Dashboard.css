@@ -4,13 +4,17 @@
 
 .dashboard-cards {
     padding: 16px;
+    flex: 0 1 420px;
 }
 
 .dashboard-card {
-    width: clamp(300px, 25%, 400px);
+    /* Forcing 400px for now, can make responsive later if desired */
+    /* width: clamp(400px, 25%, 400px); */
+    width: 100%;
     cursor: pointer;
     outline: 2px solid transparent;
     transition: all 0.2s;
+    height: fit-content;
 }
 
 .dashboard-card:hover {
@@ -25,4 +29,12 @@
 
 .fill-height {
     height: 100%;
+}
+
+.margin-center {
+    margin: 0 auto
+}
+
+#map {
+    flex-grow: 1
 }
