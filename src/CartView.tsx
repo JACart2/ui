@@ -18,8 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 
 export default function CartView() {
-    const map = useRef<maplibregl.Map | null>(null);
-    const mapRef = useRef<HTMLDivElement | null>(null)
+    const mapRef = useRef(null)
     const [currentLocation, setCurrentLocation] = useState<string | null>(null)
 
     const PIN_COLORS = [
@@ -56,11 +55,13 @@ export default function CartView() {
     };
 
     useEffect(() => {
-        if (mapRef.current == undefined) return
+        if (mapRef.current == undefined) {
+            return
+        }
 
         const protocol = new Protocol();
         maplibregl.addProtocol("pmtiles", protocol.tile);
-        map.current = new maplibregl.Map({
+        const map = new maplibregl.Map({
             container: mapRef.current,
             style: "/osm-liberty/style.json",
             center: [-78.869914, 38.435491],
@@ -68,13 +69,11 @@ export default function CartView() {
         });
 
         const nav = new maplibregl.NavigationControl();
-        map.current.addControl(nav, "top-left");
+        map.addControl(nav, "top-left");
 
         const locationPins: Marker[] = [];
 
-        map.current.on("load", async () => {
-            if (map.current == undefined) return
-
+        map.on("load", async () => {
             const point = (x: number, y: number): GeoJSON => ({
                 type: "Feature",
                 geometry: {
@@ -84,8 +83,8 @@ export default function CartView() {
                 properties: {}
             });
 
-            const image = await map.current.loadImage("osgeo-logo.png");
-            map.current.addImage("custom-marker", image.data);
+            const image = await map.loadImage("osgeo-logo.png");
+            map.addImage("custom-marker", image.data);
             function LineString(coordinates: Position[]): GeoJSON {
                 return {
                     type: "Feature",
@@ -96,22 +95,22 @@ export default function CartView() {
                     properties: {}
                 };
             }
-            map.current.addSource("limited_pose", {
+            map.addSource("limited_pose", {
                 type: "geojson",
                 data: point(-78.869914, 38.435491),
             });
 
-            map.current.addSource("visual_path", {
+            map.addSource("visual_path", {
                 type: "geojson",
                 data: LineString([]),
             });
-            map.current.addSource("remaining_path", {
+            map.addSource("remaining_path", {
                 type: "geojson",
                 data: LineString([]),
             });
 
 
-            map.current.addLayer({
+            map.addLayer({
                 id: "visual_path",
                 type: "line",
                 source: "visual_path",
@@ -131,7 +130,7 @@ export default function CartView() {
                     ],
                 },
             });
-            map.current.addLayer({
+            map.addLayer({
                 id: "remaining_path",
                 type: "line",
                 source: "remaining_path",
@@ -154,11 +153,9 @@ export default function CartView() {
             let visual_path_coordinates: number[][] = [];
 
             visual_path.subscribe((message: ROSLIB.Message) => {
-                if (map.current == undefined) return
-
                 const markers = message as ROSMarker[];
                 visual_path_coordinates = markers.map((m) => rosToMapCoords(m.pose.position));
-                const source = map.current.getSource("visual_path") as GeoJSONSource;
+                const source = map.getSource("visual_path") as GeoJSONSource;
                 source.setData(LineString(visual_path_coordinates));
             });
 
@@ -166,8 +163,6 @@ export default function CartView() {
 
             // Dynamically populate Destinations list with data from locations.json
             locations.forEach((location: { lat: number, long: number, name: string }, index) => {
-                if (map.current == undefined) return
-
                 const popup = new Popup({
                     anchor: 'bottom',
                     className: 'location-popup',
@@ -176,11 +171,12 @@ export default function CartView() {
                     closeOnMove: false,
                 })
                     .setText(location.name)
+                    .addTo(map);
 
                 const marker = new Marker({ color: PIN_COLORS[index] })
                     .setLngLat([location.long, location.lat])
                     .setPopup(popup)
-                    .addTo(map.current);
+                    .addTo(map);
 
                 marker.togglePopup();
                 marker.getElement().addEventListener('click', (e) => {
@@ -195,23 +191,19 @@ export default function CartView() {
             });
 
             vehicle_state.subscribe((message: ROSLIB.Message) => {
-                if (map.current == undefined) return
-
                 state = message as VehicleState;
                 console.log("Recieved vehicle state message:")
                 console.log(message);
                 if (state.reached_destination) {
-                    const source = map.current.getSource("remaining_path") as GeoJSONSource;
+                    const source = map.getSource("remaining_path") as GeoJSONSource;
                     source.setData(LineString([]));
                 }
             });
 
             limited_pose.subscribe(function (message: ROSLIB.Message) {
-                if (map.current == undefined) return
-
                 const poseWithCovariance = message as PoseWithCovarianceStamped;
                 const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.position);
-                const source = map.current.getSource("limited_pose") as GeoJSONSource;
+                const source = map.getSource("limited_pose") as GeoJSONSource;
                 source.setData(point(x1, y1));
 
                 if (visual_path_coordinates.length > 0 && state.is_navigating) {
@@ -226,17 +218,17 @@ export default function CartView() {
                         }
                     }
 
-                    const source = map.current.getSource("remaining_path") as GeoJSONSource;
+                    const source = map.getSource("remaining_path") as GeoJSONSource;
                     source.setData(LineString(visual_path_coordinates.slice(closestInd)));
 
-                    map.current.flyTo({
+                    map.flyTo({
                         center: [x1, y1],
                         zoom: 19,
                     });
                 }
             });
 
-            map.current.addLayer({
+            map.addLayer({
                 id: "limited_pose",
                 type: "symbol",
                 source: "limited_pose",
