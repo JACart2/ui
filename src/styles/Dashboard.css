@@ -8,6 +8,19 @@
 
 .dashboard-card {
     width: clamp(300px, 25%, 400px);
+    cursor: pointer;
+    outline: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.dashboard-card:hover {
+    outline: 2px solid #1677FF;
+    box-shadow: 0 0 8px #1677FF;
+}
+
+.card-title {
+    align-items: center;
+    gap: 8px;
 }
 
 .fill-height {
