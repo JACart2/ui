@@ -26,7 +26,7 @@ let protocol = new Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 let map = new maplibregl.Map({
   container: "map",
-  style: "../basic_map.json",
+  style: "/basic_map.json",
   center: [-78.861814, 38.433129],
   zoom: 16,
 });
@@ -142,7 +142,7 @@ map.on("load", async () => {
         navigateTo(lat, long);
 
         // Remove 'selected' class from all destinations, then apply to current one
-        [ ...document.getElementById("destinations").getElementsByTagName("li") ].forEach((el2) => {
+        [...document.getElementById("destinations").getElementsByTagName("li")].forEach((el2) => {
           el2.classList.remove("selected");
         });
 
@@ -157,8 +157,8 @@ map.on("load", async () => {
       closeOnClick: false,
       closeOnMove: false,
     })
-    .setText(name)
-    .addTo(map);
+      .setText(name)
+      .addTo(map);
 
     let marker = new Marker({ color: PIN_COLORS[index] })
       .setLngLat([long, lat])
@@ -174,7 +174,7 @@ map.on("load", async () => {
         navigateTo(lat, long);
 
         // Remove 'selected' class from all destinations, then apply to current one
-        [ ...document.getElementById("destinations").getElementsByTagName("li") ].forEach((el2) => {
+        [...document.getElementById("destinations").getElementsByTagName("li")].forEach((el2) => {
           el2.classList.remove("selected");
         });
 
