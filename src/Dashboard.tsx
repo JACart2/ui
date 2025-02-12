@@ -1,11 +1,14 @@
 import { Card, Flex, Layout, Progress } from "antd";
 import { Content, Header } from "antd/es/layout/layout";
+import { useNavigate } from 'react-router-dom';
 import "./styles/Dashboard.css"
 
 import { FaCarSide } from "react-icons/fa6";
 
 
 export default function Dashboard() {
+    const navigate = useNavigate();
+
     const carts = [
         {
             name: 'James',
@@ -33,7 +36,7 @@ export default function Dashboard() {
                     <Flex className="dashboard-cards" wrap gap="middle" justify="center">
 
                         {carts.map((cart) => (
-                            <Card className="dashboard-card" title={<div className='card-title'><FaCarSide /> <span>{cart.name}</span></div>}>
+                            <Card className="dashboard-card" title={<div className='card-title'><FaCarSide /> <span>{cart.name}</span></div>} onClick={() => navigate('/')}>
                                 <Flex vertical gap="large">
                                     <div>
                                         <span>Trip Progress</span>

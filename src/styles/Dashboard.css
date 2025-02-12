@@ -8,6 +8,12 @@
 
 .dashboard-card {
     width: clamp(300px, 25%, 400px);
+    cursor: pointer;
+    outline: 2px solid transparent;
+}
+
+.dashboard-card:hover {
+    outline: 2px solid #1677FF;
 }
 
 .card-title {

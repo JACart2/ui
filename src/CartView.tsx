@@ -171,7 +171,6 @@ export default function CartView() {
                     closeOnMove: false,
                 })
                     .setText(location.name)
-                    .addTo(map);
 
                 const marker = new Marker({ color: PIN_COLORS[index] })
                     .setLngLat([location.long, location.lat])
