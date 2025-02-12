@@ -63,8 +63,8 @@ export default function CartView() {
         maplibregl.addProtocol("pmtiles", protocol.tile);
         const map = new maplibregl.Map({
             container: mapRef.current,
-            style: "/osm-liberty/style.json",
-            center: [-78.869914, 38.435491],
+            style: "../basic_map.json",
+            center: [-78.861814, 38.433129],
             zoom: 16,
         });
 
