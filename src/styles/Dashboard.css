@@ -10,6 +10,12 @@
     width: clamp(300px, 25%, 400px);
 }
 
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .fill-height {
     height: 100%;
 }
