@@ -61,7 +61,7 @@ export default function Dashboard() {
             container: mapRef.current,
             style: "/osm-liberty/style.json",
             center: [-78.869914, 38.435491],
-            zoom: 12,
+            zoom: 15,
         });
 
         const nav = new maplibregl.NavigationControl();
