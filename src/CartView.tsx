@@ -63,7 +63,7 @@ export default function CartView() {
         map.current = new maplibregl.Map({
             container: mapRef.current,
             style: "../basic_map.json",
-            center: [-78.869914, 38.435491],
+            center: [-78.861814, 38.433129],
             zoom: 16,
         });
 
