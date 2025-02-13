@@ -59,6 +59,7 @@ ul#destinations li {
     background-color: #450084; /* JMU Purple */
     color: white;
     border: none;
+    margin: 0 auto;
     padding: 0.75rem 1.5rem;
     border-radius: 5px;
     width: 90%;
