@@ -20,8 +20,9 @@ import TripInfoCard from "./ui/TripInfoCard";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
-    const mapRef = useRef<HTMLDivElement | null>(null)
-    const [currentLocation, setCurrentLocation] = useState<string | null>(null)
+    const mapRef = useRef(null)
+    const [currentLocation, setCurrentLocation] = useState<string | null>(null);
+    const [open, setOpen] = useState(false);
 
     const PIN_COLORS = [
         'red',
@@ -249,6 +250,7 @@ export default function CartView() {
     }, [])
 
     return (
+        <>
         <div id="split">
             <div id="split2">
                 <h2>Destinations</h2>
@@ -259,9 +261,42 @@ export default function CartView() {
                     ))}
                 </ul>
                 <TripInfoCard name="My cart" speed={6} tripProgress={50}/>
+                <button id="info-button" onClick={() => 
+                {
+
+                    const popup = document.getElementById('popup');
+                    const overlay = document.getElementById('overlay');
+                    popup.style.display = 'block';
+                    overlay.style.display = 'block';
+
+                }
+            }>Additional Location Information</button>
+
             </div>
 
             <div ref={mapRef} id="map"></div>
         </div>
+        <div id="overlay"></div>
+        <div id="popup">
+            <h3>Learn More</h3>
+            <ul>
+                <li><a href="https://www.jmu.edu/festival/index.shtml" target="_blank">Festival Conference & Student Center</a></li>
+                <li><a href="https://jmu.campusdish.com/LocationsAndMenus/PODinEnGeo" target="_blank">P.O.D. in EnGeo</a></li>
+                <li><a href="https://www.jmu.edu/orl/our-residence-halls/area-skyline.shtml" target="_blank">Chesapeake Hall</a></li>
+                <li><a href="https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/" target="_blank">King Hall</a></li>
+                <li><a href="https://map.jmu.edu/?id=1869#!bm/?ct/0?m/623302?s/Paul" target="_blank">Paul Jennings Hall</a></li>
+                <li><a href="https://map.jmu.edu/?id=1869#!bm/?ct/0?m/622822?s/E-hall" target="_blank">E-Hall</a></li>
+            </ul>
+            <button onClick={() => 
+            {
+                const popup = document.getElementById('popup');
+                const overlay = document.getElementById('overlay');
+                popup.style.display = 'none';
+                overlay.style.display = 'none';
+            }
+            }>Close</button>
+        </div>
+        </>
+        
     )
 }
