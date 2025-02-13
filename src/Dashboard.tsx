@@ -1,9 +1,7 @@
-import { Button, Card, Flex, Layout, Progress } from "antd";
+import { Flex, Layout } from "antd";
 import { Content, Header } from "antd/es/layout/layout";
-import { useNavigate } from 'react-router-dom';
 import "./styles/Dashboard.css"
 
-import { FaCarSide, FaLocationArrow, FaLocationCrosshairs, FaLocationDot, FaRightLong } from "react-icons/fa6";
 import { useEffect, useRef } from "react";
 import { Protocol } from "pmtiles";
 import maplibregl, { Marker } from "maplibre-gl";
@@ -11,7 +9,6 @@ import maplibregl, { Marker } from "maplibre-gl";
 import TripInfoCard from "./ui/TripInfoCard";
 
 export default function Dashboard() {
-    const navigate = useNavigate();
     const map = useRef<maplibregl.Map | null>(null)
     const mapRef = useRef<HTMLDivElement | null>(null)
     const cartMarkers = useRef<{ [key: string]: Marker }>({})
@@ -22,37 +19,25 @@ export default function Dashboard() {
             name: 'James',
             speed: 3,
             tripProgress: 75,
-            lat: 38.433347,
-            long: -78.863156,
-            start: 'Chesapeake Hall',
-            stop: 'Front of King Hall'
+            longLat: [-78.863156, 38.433347],
+            startLocation: 'Chesapeake Hall',
+            endLocation: 'Front of King Hall'
         },
         {
             name: 'Madison',
             speed: 6,
             tripProgress: 20,
-            lat: 38.431957,
-            long: -78.860981,
-            start: 'E-Hall',
-            stop: 'Festival'
+            longLat: [-78.860981, 38.431957],
+            startLocation: 'E-Hall',
+            endLocation: 'Festival'
         },
     ]
 
-    function speedToPercent(speed: number) {
-        const max = 8;
-        return (Math.min(Math.max(0, speed), max) / max) * 100
-    }
-
-    function flyToCart(index: number, e?: React.MouseEvent) {
-        e?.preventDefault()
-        e?.stopPropagation()
-
+    function focusCart(longLat: number[]) {
         if (map.current == undefined) return
 
-        const cart = carts[index];
-
         map.current.flyTo({
-            center: [cart.long, cart.lat],
+            center: [longLat[0], longLat[1]],
             zoom: 17,
         });
     }
@@ -81,7 +66,7 @@ export default function Dashboard() {
 
             carts.forEach(cart => {
                 const marker = new Marker()
-                    .setLngLat([cart.long, cart.lat])
+                    .setLngLat([cart.longLat[0], cart.longLat[1]])
                     .addTo(map.current!);
 
 
@@ -98,9 +83,8 @@ export default function Dashboard() {
             <Content>
                 <Flex className="fill-height">
                     <Flex className="dashboard-cards" vertical gap="middle" justify="flex-start">
-
                         {carts.map((cart) => (
-                            <TripInfoCard {...cart}></TripInfoCard>
+                            <TripInfoCard {...cart} doesNavToRoot={true} focusCartCallback={(longLat: number[]) => focusCart(longLat)}></TripInfoCard>
                         ))}
                     </Flex>
                     <div ref={mapRef} id="map"></div>
