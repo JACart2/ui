@@ -14,8 +14,6 @@
     "maplibre-gl": "^4.4.1",
     "ml-matrix": "^6.11.1",
     "pmtiles": "^3.0.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "roslib": "^1.4.1"
   },
   "devDependencies": {
