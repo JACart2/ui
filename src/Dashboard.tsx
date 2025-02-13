@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react";
 import { Protocol } from "pmtiles";
 import maplibregl, { Marker } from "maplibre-gl";
 
+import TripInfoCard from "./ui/TripInfoCard";
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -98,32 +99,8 @@ export default function Dashboard() {
                 <Flex className="fill-height">
                     <Flex className="dashboard-cards" vertical gap="middle" justify="flex-start">
 
-                        {carts.map((cart, index) => (
-                            <Card className="dashboard-card" onClick={() => navigate('/')} title={
-                                // Card title (icon, name, locate button)
-                                <Flex className='card-title' justify="space-between">
-                                    <Flex className='card-title'><FaCarSide /> <span>{cart.name}</span></Flex>
-                                    <Button className="cart-locate-button" onClick={($event) => flyToCart(index, $event)} icon={<FaLocationCrosshairs />} shape="circle"></Button>
-                                </Flex>
-                            }>
-                                { /* Card body */}
-                                <Flex vertical gap="large">
-
-                                    <div>
-                                        <span style={{ fontWeight: 'bold' }}>Trip Progress</span>
-                                        <Progress type="line" percent={cart.tripProgress} />
-                                        <Flex align="center" style={{ gap: '4px' }}>
-                                            <FaLocationArrow color="blue" />
-                                            <span>{cart.start}</span>
-                                            <FaRightLong style={{ margin: '0 8px', opacity: 0.6 }} />
-                                            <FaLocationDot color="#E04A3A" />
-                                            <span>{cart.stop}</span>
-                                        </Flex>
-                                    </div>
-
-                                    <Progress className="margin-center" type="dashboard" percent={speedToPercent(cart.speed)} format={() => `${cart.speed} mph`} />
-                                </Flex>
-                            </Card>
+                        {carts.map((cart) => (
+                            <TripInfoCard {...cart}></TripInfoCard>
                         ))}
                     </Flex>
                     <div ref={mapRef} id="map"></div>

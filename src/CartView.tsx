@@ -16,6 +16,7 @@ import locations from "./locations.json";
 import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTypes";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
+import TripInfoCard from "./ui/TripInfoCard";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -257,6 +258,7 @@ export default function CartView() {
                             onClick={() => navigateToLocation(location)}>{location.name}</li>
                     ))}
                 </ul>
+                <TripInfoCard name="My cart" speed={6} tripProgress={50}/>
             </div>
 
             <div ref={mapRef} id="map"></div>
