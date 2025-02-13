@@ -1,0 +1,15 @@
+.dashboard-container {
+    height: 100vh;
+}
+
+.dashboard-cards {
+    padding: 16px;
+}
+
+.dashboard-card {
+    width: clamp(300px, 25%, 400px);
+}
+
+.fill-height {
+    height: 100%;
+}
