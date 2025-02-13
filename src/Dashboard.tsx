@@ -1,7 +1,7 @@
-import { Card, Flex, Layout, Progress } from "antd";
+import { Flex, Layout } from "antd";
 import { Content, Header } from "antd/es/layout/layout";
 import "./styles/Dashboard.css"
-
+import TripInfoCard from "./ui/TripInfoCard";
 
 export default function Dashboard() {
     const carts = [
@@ -17,11 +17,6 @@ export default function Dashboard() {
         },
     ]
 
-    function speedToPercent(speed: number) {
-        const max = 8;
-        return (Math.min(Math.max(0, speed), max) / max) * 100
-    }
-
     return (
         <Layout className="dashboard-container">
             <Header><h1 style={{ color: 'white' }}>JACart Dashboard</h1></Header>
@@ -31,16 +26,7 @@ export default function Dashboard() {
                     <Flex className="dashboard-cards" wrap gap="middle" justify="center">
 
                         {carts.map((cart) => (
-                            <Card className="dashboard-card" title={cart.name}>
-                                <Flex vertical gap="large">
-                                    <div>
-                                        <span>Trip Progress</span>
-                                        <Progress type="line" percent={cart.tripProgress} />
-                                    </div>
-                                    <Progress type="dashboard" percent={speedToPercent(cart.speed)} format={() => `${cart.speed} mph`} style={{ margin: '0 auto' }} />
-
-                                </Flex>
-                            </Card>
+                            <TripInfoCard {...cart}></TripInfoCard>
                         ))}
                     </Flex>
                 </Flex>
