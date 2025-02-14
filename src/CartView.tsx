@@ -17,6 +17,9 @@ import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTyp
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
+import { Button } from "antd";
+import { FaStop } from "react-icons/fa6";
+import { FaStopCircle } from "react-icons/fa";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -67,10 +70,12 @@ export default function CartView() {
             style: "/basic_map.json",
             center: [-78.861814, 38.433129],
             zoom: 16,
+            attributionControl: false
         });
 
         const nav = new maplibregl.NavigationControl();
         map.current.addControl(nav, "top-left");
+        map.current.addControl(new maplibregl.AttributionControl(), 'top-right');
 
         const locationPins: Marker[] = [];
 
@@ -251,52 +256,56 @@ export default function CartView() {
 
     return (
         <>
-        <div id="split">
-            <div id="split2">
-                <h2>Destinations</h2>
-                <ul id="destinations">
-                    {locations.map((location) => (
-                        <li className={clsx('destination-item', { selected: currentLocation == location.name })} role='button' key={location.name}
-                            onClick={() => navigateToLocation(location)}>{location.name}</li>
-                    ))}
-                </ul>
-                <TripInfoCard name="My cart" speed={6} tripProgress={50}/>
-                <button id="info-button" onClick={() => 
-                {
+            <div id="split">
+                <div id="sidebar">
+                    <h2>Destinations</h2>
+                    <ul id="destinations">
+                        {locations.map((location) => (
+                            <li className={clsx('destination-item', { selected: currentLocation == location.name })} role='button' key={location.name}
+                                onClick={() => navigateToLocation(location)}>{location.name}</li>
+                        ))}
+                    </ul>
+                    <TripInfoCard name="My cart" speed={6} tripProgress={50} />
+                    <Button id="info-button" size='large' onClick={() => {
 
+                        const popup = document.getElementById('popup');
+                        const overlay = document.getElementById('overlay');
+                        popup.style.display = 'block';
+                        overlay.style.display = 'block';
+
+                    }
+                    }>Additional Location Information</Button>
+                </div>
+
+                <div id="map-container">
+                    <div ref={mapRef} id="map"></div>
+                    { /* TODO: Only show emergency stop button when cart is navigating */}
+                    <Button id="emergency-stop" type="primary" danger>
+                        <FaStopCircle />
+                        Press for Emergency Stop
+                    </Button>
+                </div>
+            </div>
+            <div id="overlay"></div>
+            <div id="popup">
+                <h3>Learn More</h3>
+                <ul>
+                    <li><a href="https://www.jmu.edu/festival/index.shtml" target="_blank">Festival Conference & Student Center</a></li>
+                    <li><a href="https://jmu.campusdish.com/LocationsAndMenus/PODinEnGeo" target="_blank">P.O.D. in EnGeo</a></li>
+                    <li><a href="https://www.jmu.edu/orl/our-residence-halls/area-skyline.shtml" target="_blank">Chesapeake Hall</a></li>
+                    <li><a href="https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/" target="_blank">King Hall</a></li>
+                    <li><a href="https://map.jmu.edu/?id=1869#!bm/?ct/0?m/623302?s/Paul" target="_blank">Paul Jennings Hall</a></li>
+                    <li><a href="https://map.jmu.edu/?id=1869#!bm/?ct/0?m/622822?s/E-hall" target="_blank">E-Hall</a></li>
+                </ul>
+                <button onClick={() => {
                     const popup = document.getElementById('popup');
                     const overlay = document.getElementById('overlay');
-                    popup.style.display = 'block';
-                    overlay.style.display = 'block';
-
+                    popup.style.display = 'none';
+                    overlay.style.display = 'none';
                 }
-            }>Additional Location Information</button>
-
+                }>Close</button>
             </div>
-
-            <div ref={mapRef} id="map"></div>
-        </div>
-        <div id="overlay"></div>
-        <div id="popup">
-            <h3>Learn More</h3>
-            <ul>
-                <li><a href="https://www.jmu.edu/festival/index.shtml" target="_blank">Festival Conference & Student Center</a></li>
-                <li><a href="https://jmu.campusdish.com/LocationsAndMenus/PODinEnGeo" target="_blank">P.O.D. in EnGeo</a></li>
-                <li><a href="https://www.jmu.edu/orl/our-residence-halls/area-skyline.shtml" target="_blank">Chesapeake Hall</a></li>
-                <li><a href="https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/" target="_blank">King Hall</a></li>
-                <li><a href="https://map.jmu.edu/?id=1869#!bm/?ct/0?m/623302?s/Paul" target="_blank">Paul Jennings Hall</a></li>
-                <li><a href="https://map.jmu.edu/?id=1869#!bm/?ct/0?m/622822?s/E-hall" target="_blank">E-Hall</a></li>
-            </ul>
-            <button onClick={() => 
-            {
-                const popup = document.getElementById('popup');
-                const overlay = document.getElementById('overlay');
-                popup.style.display = 'none';
-                overlay.style.display = 'none';
-            }
-            }>Close</button>
-        </div>
         </>
-        
+
     )
 }
