@@ -19,13 +19,10 @@
 
 h2 {
     padding: 1rem;
-    /* JMU Purple */
-    background-color: #450084;
-    /* White text */
+    background-color: var(--jmu-purple);
     color: white;
     margin: 0;
     height: 60px;
-    /* Increased height */
     display: flex;
     align-items: center;
 }
@@ -73,8 +70,7 @@ ul#destinations li {
 }
 
 .selected {
-    /* JMU Gold */
-    background: #CBB677;
+    background: var(--jmu-gold);
 }
 
 .location-popup .maplibregl-popup-content {
@@ -83,7 +79,7 @@ ul#destinations li {
 
 #info-button {
     /* JMU Purple */
-    background-color: #450084;
+    background-color: var(--jmu-purple);
     color: white;
     border: none;
     margin: 8px auto;
@@ -96,8 +92,7 @@ ul#destinations li {
 }
 
 #info-button:hover {
-    /* JMU Gold */
-    background-color: #CBB677;
+    background-color: var(--jmu-gold);
 }
 
 #popup {
@@ -117,9 +112,7 @@ ul#destinations li {
 #popup h3 {
     margin: 0;
     padding: 1rem;
-    /* JMU Purple */
-    background-color: #450084;
-    /* White text */
+    background-color: var(--jmu-purple);
     color: white;
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
@@ -133,8 +126,7 @@ ul#destinations li {
 
 #popup ul li {
     padding: 0.75rem 1rem;
-    /* JMU Gold */
-    background-color: #CBB677;
+    background-color: var(--jmu-gold);
     border-bottom: 1px solid #ddd;
 }
 
@@ -143,8 +135,7 @@ ul#destinations li {
 }
 
 #popup ul li a {
-    /* JMU Purple */
-    color: #450084;
+    color: var(--jmu-purple);
     text-decoration: none;
 }
 
@@ -155,8 +146,7 @@ ul#destinations li {
 #popup button {
     width: 100%;
     padding: 0.75rem;
-    /* JMU Purple */
-    background-color: #450084;
+    background-color: var(--jmu-purple);
     color: white;
     border: none;
     border-bottom-left-radius: 5px;
@@ -166,8 +156,7 @@ ul#destinations li {
 }
 
 #popup button:hover {
-    /* JMU Gold */
-    background-color: #CBB677;
+    background-color: var(--jmu-gold);
 }
 
 #overlay {
