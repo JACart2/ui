@@ -265,7 +265,9 @@ export default function CartView() {
                                 onClick={() => navigateToLocation(location)}>{location.name}</li>
                         ))}
                     </ul>
-                    <TripInfoCard name="My cart" speed={6} tripProgress={50} />
+                    <div id='trip-info-container'>
+                        <TripInfoCard name="My Cart" speed={6} tripProgress={50} />
+                    </div>
                     <Button id="info-button" size='large' onClick={() => {
 
                         const popup = document.getElementById('popup');
