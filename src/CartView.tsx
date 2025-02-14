@@ -17,9 +17,10 @@ import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTyp
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
-import { Button } from "antd";
+import { Button, Flex } from "antd";
 import { FaStop } from "react-icons/fa6";
 import { FaStopCircle } from "react-icons/fa";
+import { IoCall, IoWarning } from "react-icons/io5";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -281,11 +282,15 @@ export default function CartView() {
 
                 <div id="map-container">
                     <div ref={mapRef} id="map"></div>
-                    { /* TODO: Only show emergency stop button when cart is navigating */}
-                    <Button id="emergency-stop" type="primary" danger>
-                        <FaStopCircle />
-                        Press for Emergency Stop
-                    </Button>
+                    <Flex id="map-buttons" gap='middle'>
+                        { /* TODO: Only show emergency stop button when cart is navigating */}
+                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
+                            Press for Emergency Stop
+                        </Button>
+                        <Button id="request-help" type="primary" size="large" icon={<IoCall />}>
+                            Press to Request Help
+                        </Button>
+                    </Flex>
                 </div>
             </div>
             <div id="overlay"></div>

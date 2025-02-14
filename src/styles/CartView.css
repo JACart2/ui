@@ -38,7 +38,7 @@ h2 {
     height: 100%;
 }
 
-#emergency-stop {
+#map-buttons {
     position: absolute;
     bottom: 12px;
     left: 12px;
@@ -47,6 +47,15 @@ h2 {
 
     font-weight: bold;
     font-size: large;
+}
+
+#map-buttons>button {
+    flex: 1;
+    height: 100%;
+}
+
+#request-help {
+    background: orange;
 }
 
 #destinations {
