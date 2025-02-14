@@ -52,10 +52,15 @@ h2 {
 #map-buttons>button {
     flex: 1;
     height: 100%;
+    transition: background 0.1s;
 }
 
 #request-help {
     background: orange;
+}
+
+#request-help:active {
+    background: rgb(227, 148, 0);
 }
 
 #destinations {
