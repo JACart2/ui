@@ -3,6 +3,7 @@ A user interface for autonomous navigation of a JACART.
 
 # Important Tools/Libraries Used
 - [React](https://react.dev/): for implementing ui elements declaratively.
+- [Ant Design](https://ant.design/components/overview/): to provide accessible UI components across the app.
 - [Maplibre](https://maplibre.org/): for rendering the map
 - [React Map GL](https://visgl.github.io/react-map-gl/): react wrapper for Maplibre
 - [OpenStreetMap](https://www.openstreetmap.org/#map=17/38.43711/-78.87157): Current map data was directly exported from OpenStreetMap
