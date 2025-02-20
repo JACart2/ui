@@ -1,9 +1,9 @@
 import "maplibre-gl/dist/maplibre-gl.css";
-import "./styles/CartView.css"
+import "./styles/CartView.css";
 import { Protocol } from "pmtiles";
 import maplibregl, { GeoJSONSource, Marker, Popup } from "maplibre-gl";
 import GeoJSON, { Position } from "geojson";
-type GeoJSON = GeoJSON.GeoJSON
+type GeoJSON = GeoJSON.GeoJSON;
 import * as ROSLIB from "roslib";
 import {
     clicked_point,
@@ -17,16 +17,17 @@ import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTyp
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
-import { Button, Flex } from "antd";
+import { Button, Flex, Modal } from "antd"; // Import Modal from Ant Design
 import { FaStop } from "react-icons/fa6";
 import { FaStopCircle } from "react-icons/fa";
 import { IoCall, IoWarning } from "react-icons/io5";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
-    const mapRef = useRef(null)
+    const mapRef = useRef(null);
     const [currentLocation, setCurrentLocation] = useState<string | null>(null);
-    const [open, setOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
+    const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
 
     const PIN_COLORS = [
         'red',
@@ -36,7 +37,25 @@ export default function CartView() {
         'purple',
         'pink',
         'skyblue'
-    ]
+    ];
+
+    const showModal = () => {
+        setIsModalOpen(true);
+    };
+
+    const handleOk = () => {
+        setIsModalOpen(false);
+        setCurrentLink(null); // Reset the current link when modal is closed
+    };
+
+    const handleCancel = () => {
+        setIsModalOpen(false);
+        setCurrentLink(null); // Reset the current link when modal is closed
+    };
+
+    const handleLinkClick = (url: string) => {
+        setCurrentLink(url); // Set the current link to display in the modal
+    };
 
     function navigateTo(lat: number, lng: number) {
         console.log(`Target Coordinates: ${lat}, ${lng}`);
@@ -62,7 +81,7 @@ export default function CartView() {
     };
 
     useEffect(() => {
-        if (mapRef.current == undefined) return
+        if (mapRef.current == undefined) return;
 
         const protocol = new Protocol();
         maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -81,7 +100,7 @@ export default function CartView() {
         const locationPins: Marker[] = [];
 
         map.current.on("load", async () => {
-            if (map.current == undefined) return
+            if (map.current == undefined) return;
 
             const point = (x: number, y: number): GeoJSON => ({
                 type: "Feature",
@@ -117,7 +136,6 @@ export default function CartView() {
                 type: "geojson",
                 data: LineString([]),
             });
-
 
             map.current.addLayer({
                 id: "visual_path",
@@ -162,7 +180,7 @@ export default function CartView() {
             let visual_path_coordinates: number[][] = [];
 
             visual_path.subscribe((message: ROSLIB.Message) => {
-                if (map.current == undefined) return
+                if (map.current == undefined) return;
 
                 const markers = message as ROSMarker[];
                 visual_path_coordinates = markers.map((m) => rosToMapCoords(m.pose.position));
@@ -170,11 +188,9 @@ export default function CartView() {
                 source.setData(LineString(visual_path_coordinates));
             });
 
-
-
             // Dynamically populate Destinations list with data from locations.json
             locations.forEach((location: { lat: number, long: number, name: string }, index) => {
-                if (map.current == undefined) return
+                if (map.current == undefined) return;
 
                 const popup = new Popup({
                     anchor: 'bottom',
@@ -198,12 +214,10 @@ export default function CartView() {
                 });
 
                 locationPins.push(marker);
-
-
             });
 
             vehicle_state.subscribe((message: ROSLIB.Message) => {
-                if (map.current == undefined) return
+                if (map.current == undefined) return;
 
                 state = message as VehicleState;
                 console.log("Recieved vehicle state message:")
@@ -215,7 +229,7 @@ export default function CartView() {
             });
 
             limited_pose.subscribe(function (message: ROSLIB.Message) {
-                if (map.current == undefined) return
+                if (map.current == undefined) return;
 
                 const poseWithCovariance = message as PoseWithCovarianceStamped;
                 const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.position);
@@ -253,7 +267,7 @@ export default function CartView() {
                 },
             });
         });
-    }, [])
+    }, []);
 
     return (
         <>
@@ -269,15 +283,9 @@ export default function CartView() {
                     <div id='trip-info-container'>
                         <TripInfoCard name="My Cart" speed={6} tripProgress={50} />
                     </div>
-                    <Button id="info-button" size='large' onClick={() => {
-
-                        const popup = document.getElementById('popup');
-                        const overlay = document.getElementById('overlay');
-                        popup.style.display = 'block';
-                        overlay.style.display = 'block';
-
-                    }
-                    }>Additional Location Information</Button>
+                    <Button id="info-button" size='large' onClick={showModal}>
+                        Additional Location Information
+                    </Button>
                 </div>
 
                 <div id="map-container">
@@ -293,26 +301,62 @@ export default function CartView() {
                     </Flex>
                 </div>
             </div>
-            <div id="overlay"></div>
-            <div id="popup">
-                <h3>Learn More</h3>
-                <ul>
-                    <li><a href="https://www.jmu.edu/festival/index.shtml" target="_blank">Festival Conference & Student Center</a></li>
-                    <li><a href="https://jmu.campusdish.com/LocationsAndMenus/PODinEnGeo" target="_blank">P.O.D. in EnGeo</a></li>
-                    <li><a href="https://www.jmu.edu/orl/our-residence-halls/area-skyline.shtml" target="_blank">Chesapeake Hall</a></li>
-                    <li><a href="https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/" target="_blank">King Hall</a></li>
-                    <li><a href="https://map.jmu.edu/?id=1869#!bm/?ct/0?m/623302?s/Paul" target="_blank">Paul Jennings Hall</a></li>
-                    <li><a href="https://map.jmu.edu/?id=1869#!bm/?ct/0?m/622822?s/E-hall" target="_blank">E-Hall</a></li>
-                </ul>
-                <button onClick={() => {
-                    const popup = document.getElementById('popup');
-                    const overlay = document.getElementById('overlay');
-                    popup.style.display = 'none';
-                    overlay.style.display = 'none';
-                }
-                }>Close</button>
-            </div>
-        </>
 
-    )
+            {/* Ant Design Modal */}
+            <Modal
+                title={<span className="modal-title">Learn More</span>}
+                open={isModalOpen}
+                onOk={handleOk}
+                onCancel={handleCancel}
+                footer={[
+                    <Button key="close" type="primary" className="modal-close-button" onClick={handleCancel}>
+                        Close
+                    </Button>
+                ]}
+                width={currentLink ? "85%" : "40%"} // 85% width for iframe, 40% for links
+                className="custom-modal"
+                closable={false} 
+                style={{ top: '10%' }}
+                bodyStyle={{ 
+                    padding: 0, 
+                    backgroundColor: 'var(--jmu-gold)', 
+                    height: currentLink ? '75vh' : 'auto', // 80% height for iframe
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    justifyContent: 'center', 
+                    alignItems: 'flex-start', // Left-align content
+                    textAlign: 'left', // Left-align text
+                }}
+            >
+                {currentLink ? (
+                    <iframe
+                        src={currentLink}
+                        className="modal-iframe"
+                        title="Link Content"
+                    />
+                ) : (
+                    <ul className="modal-link-list">
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://www.jmu.edu/festival/index.shtml")}>
+                            Festival Conference & Student Center
+                        </li>
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://jmu.campusdish.com/LocationsAndMenus/PODinEnGeo")}>
+                            P.O.D. in EnGeo
+                        </li>
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://www.jmu.edu/orl/our-residence-halls/area-skyline.shtml")}>
+                            Chesapeake Hall
+                        </li>
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/")}>
+                            King Hall
+                        </li>
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!bm/?ct/0?m/623302?s/Paul")}>
+                            Paul Jennings Hall
+                        </li>
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!bm/?ct/0?m/622822?s/E-hall")}>
+                            E-Hall
+                        </li>
+                    </ul>
+                )}
+            </Modal>
+        </>
+    );
 }
