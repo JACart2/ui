@@ -57,6 +57,10 @@ export default function CartView() {
         setCurrentLink(url); // Set the current link to display in the modal
     };
 
+    const handleBack = () => {
+        setCurrentLink(null); // Reset the current link to go back to the list of locations
+    };
+
     function navigateTo(lat: number, lng: number) {
         console.log(`Target Coordinates: ${lat}, ${lng}`);
         const [x, y] = lngLatToMapCoords({ lat, lng });
@@ -302,30 +306,35 @@ export default function CartView() {
                 </div>
             </div>
 
-            {/* Ant Design Modal */}
+            {/* Ant Design Modal For Additional Location Infrormation */}
             <Modal
                 title={<span className="modal-title">Learn More</span>}
                 open={isModalOpen}
                 onOk={handleOk}
                 onCancel={handleCancel}
                 footer={[
+                    currentLink && (
+                        <Button key="back" type="default" onClick={handleBack}>
+                            Back
+                        </Button>
+                    ),
                     <Button key="close" type="primary" className="modal-close-button" onClick={handleCancel}>
                         Close
                     </Button>
                 ]}
-                width={currentLink ? "85%" : "40%"} // 85% width for iframe, 40% for links
+                width={currentLink ? "85%" : "40%"} 
                 className="custom-modal"
                 closable={false} 
                 style={{ top: '10%' }}
                 bodyStyle={{ 
                     padding: 0, 
                     backgroundColor: 'var(--jmu-gold)', 
-                    height: currentLink ? '75vh' : 'auto', // 80% height for iframe
+                    height: currentLink ? '75vh' : 'auto', 
                     display: 'flex', 
                     flexDirection: 'column', 
                     justifyContent: 'center', 
-                    alignItems: 'flex-start', // Left-align content
-                    textAlign: 'left', // Left-align text
+                    alignItems: 'flex-start', 
+                    textAlign: 'left', 
                 }}
             >
                 {currentLink ? (
@@ -336,13 +345,13 @@ export default function CartView() {
                     />
                 ) : (
                     <ul className="modal-link-list">
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://www.jmu.edu/festival/index.shtml")}>
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/592720?s/Fest")}>
                             Festival Conference & Student Center
                         </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://jmu.campusdish.com/LocationsAndMenus/PODinEnGeo")}>
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/623291?s/P.O")}>
                             P.O.D. in EnGeo
                         </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://www.jmu.edu/orl/our-residence-halls/area-skyline.shtml")}>
+                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576622?s/Ches")}>
                             Chesapeake Hall
                         </li>
                         <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/")}>

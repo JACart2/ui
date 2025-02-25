@@ -122,24 +122,27 @@ ul#destinations li {
     text-align: left;
     font-size: 1.5rem;
     border-bottom: none !important;
-    padding: 16px 24px !important; /* Add padding only to header */
+    padding: 16px 24px !important; 
 }
 
 .custom-modal .ant-modal-title {
     color: white !important;
+    font-size: 1.2rem;
 }
 
 .custom-modal .ant-modal-footer {
     background-color: var(--jmu-purple) !important;
     border-top: none !important;
     text-align: center;
-    padding: 16px 24px !important; /* Add padding only to footer */
+    padding: 16px 24px !important; 
 }
 
 .custom-modal .ant-modal-footer .ant-btn {
     background-color: var(--jmu-purple) !important;
-    border-color: var(--jmu-purple) !important;
+    border-color: var(--jmu-gold) !important;
     color: white !important;
+    font-size: 1.2rem;
+    font-weight: bold;
     margin: 0 auto;
 }
 
