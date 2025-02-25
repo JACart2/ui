@@ -1,0 +1,30 @@
+#dev-menu-handle {
+    position: fixed;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: white;
+    border: 2px solid black;
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    padding: 8px;
+    display: flex;
+    place-items: center;
+    cursor: pointer;
+    transition: right 0.4s;
+}
+
+#dev-menu-handle:hover {
+    right: 0;
+}
+
+.label-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.label-input>span {
+    font-family: monospace;
+}

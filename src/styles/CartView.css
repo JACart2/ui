@@ -113,7 +113,7 @@ ul#destinations li {
 .custom-modal .ant-modal-content {
     background-color: var(--jmu-gold) !important;
     border-radius: 10px !important;
-    padding: 0 !important; 
+    padding: 0 !important;
 }
 
 .custom-modal .ant-modal-header {
@@ -122,7 +122,7 @@ ul#destinations li {
     text-align: left;
     font-size: 1.5rem;
     border-bottom: none !important;
-    padding: 16px 24px !important; 
+    padding: 16px 24px !important;
 }
 
 .custom-modal .ant-modal-title {
@@ -134,7 +134,7 @@ ul#destinations li {
     background-color: var(--jmu-purple) !important;
     border-top: none !important;
     text-align: center;
-    padding: 16px 24px !important; 
+    padding: 16px 24px !important;
 }
 
 .custom-modal .ant-modal-footer .ant-btn {

@@ -18,9 +18,9 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
 import { Button, Flex, Modal } from "antd"; // Import Modal from Ant Design
-import { FaStop } from "react-icons/fa6";
-import { FaStopCircle } from "react-icons/fa";
-import { IoCall, IoWarning } from "react-icons/io5";
+import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
+import { IoCall } from "react-icons/io5";
+import DevMenu from "./ui/DevMenu";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -28,6 +28,12 @@ export default function CartView() {
     const [currentLocation, setCurrentLocation] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
     const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
+
+    const [state, setState] = useState<VehicleState>({
+        is_navigating: false,
+        reached_destination: true,
+        stopped: false,
+    });
 
     const PIN_COLORS = [
         'red',
@@ -77,12 +83,6 @@ export default function CartView() {
             setCurrentLocation(location.name);
         }
     }
-
-    let state: VehicleState = {
-        is_navigating: false,
-        reached_destination: true,
-        stopped: false,
-    };
 
     useEffect(() => {
         if (mapRef.current == undefined) return;
@@ -223,7 +223,7 @@ export default function CartView() {
             vehicle_state.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
 
-                state = message as VehicleState;
+                setState(message as VehicleState);
                 console.log("Recieved vehicle state message:")
                 console.log(message);
                 if (state.reached_destination) {
@@ -296,9 +296,26 @@ export default function CartView() {
                     <div ref={mapRef} id="map"></div>
                     <Flex id="map-buttons" gap='middle'>
                         { /* TODO: Only show emergency stop button when cart is navigating */}
-                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
-                            Press for Emergency Stop
-                        </Button>
+
+                        {state.is_navigating &&
+                            <>
+                                {
+                                    state.stopped ?
+
+                                        <Button id="resume-trip" type="primary" size="large" icon={<FaPlayCircle />}>
+                                            Press to Resume Trip
+                                        </Button>
+
+                                        :
+
+                                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
+                                            Press for Emergency Stop
+                                        </Button>
+                                }
+
+                            </>
+                        }
+
                         <Button id="request-help" type="primary" size="large" icon={<IoCall />}>
                             Press to Request Help
                         </Button>
@@ -322,19 +339,19 @@ export default function CartView() {
                         Close
                     </Button>
                 ]}
-                width={currentLink ? "85%" : "40%"} 
+                width={currentLink ? "85%" : "40%"}
                 className="custom-modal"
-                closable={false} 
+                closable={false}
                 style={{ top: '10%' }}
-                bodyStyle={{ 
-                    padding: 0, 
-                    backgroundColor: 'var(--jmu-gold)', 
-                    height: currentLink ? '75vh' : 'auto', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    justifyContent: 'center', 
-                    alignItems: 'flex-start', 
-                    textAlign: 'left', 
+                bodyStyle={{
+                    padding: 0,
+                    backgroundColor: 'var(--jmu-gold)',
+                    height: currentLink ? '75vh' : 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'flex-start',
+                    textAlign: 'left',
                 }}
             >
                 {currentLink ? (
@@ -366,6 +383,10 @@ export default function CartView() {
                     </ul>
                 )}
             </Modal>
+
+            {process.env.NODE_ENV === 'development' &&
+                <DevMenu vehicleState={state} setVehicleState={setState}></DevMenu>
+            }
         </>
     );
 }
