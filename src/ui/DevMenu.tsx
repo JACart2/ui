@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Drawer, Switch } from "antd";
+import { Button, Drawer, Switch } from "antd";
 import { useState } from "react";
 import { FaCode } from "react-icons/fa6";
 
@@ -27,7 +27,11 @@ export default function DevMenu({ vehicleState, setVehicleState }: any) {
         <>
             <div id="dev-menu-handle" onClick={openDrawer}><FaCode /></div>
 
-            <Drawer title="Dev Tools" onClose={closeDrawer} open={open}>
+            <Drawer title="Dev Tools" onClose={closeDrawer} open={open} maskClassName="invisible-mask"
+                footer={
+                    <Button className="close-button" onClick={closeDrawer}>Close</Button>
+                }>
+
                 <h3>Vehicle State</h3>
                 <div className="label-input">
                     <Switch checked={vehicleState.is_navigating} onChange={(checked) => editState({ is_navigating: checked })}></Switch>

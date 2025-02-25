@@ -28,3 +28,12 @@
 .label-input>span {
     font-family: monospace;
 }
+
+.close-button {
+    width: 100%;
+}
+
+.invisible-mask {
+    background-color: #00000020 !important;
+
+}
