@@ -404,7 +404,7 @@ export default function CartView() {
                 width="40%"
                 className="custom-modal"
                 closable={false}
-                style={{ top: '10%' }}
+                style={{ top: '30%' }}
                 bodyStyle={{ 
                     padding: '24px', // Add padding to the body
                     backgroundColor: 'var(--jmu-gold)', 
