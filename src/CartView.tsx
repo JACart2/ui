@@ -26,8 +26,10 @@ export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
     const mapRef = useRef(null);
     const [currentLocation, setCurrentLocation] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
+    const [isModalOpen, setIsModalOpen] = useState(false); // State for additional info modal
     const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal
+    const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null); // State to store the selected location for confirmation
 
     const PIN_COLORS = [
         'red',
@@ -59,6 +61,24 @@ export default function CartView() {
 
     const handleBack = () => {
         setCurrentLink(null); // Reset the current link to go back to the list of locations
+    };
+
+    const handleLocationSelect = (location: { lat: number, long: number, name: string }) => {
+        setSelectedLocation(location); // Store the selected location
+        setIsConfirmationModalOpen(true); // Open the confirmation modal
+    };
+
+    const handleConfirmation = () => {
+        if (selectedLocation) {
+            navigateTo(selectedLocation.lat, selectedLocation.long); // Navigate to the selected location
+            setCurrentLocation(selectedLocation.name); // Set the current location
+        }
+        setIsConfirmationModalOpen(false); // Close the confirmation modal
+    };
+
+    const handleConfirmationCancel = () => {
+        setSelectedLocation(null); // Deselect the location
+        setIsConfirmationModalOpen(false); // Close the confirmation modal
     };
 
     function navigateTo(lat: number, lng: number) {
@@ -214,7 +234,7 @@ export default function CartView() {
                 marker.getElement().addEventListener('click', (e) => {
                     e.stopPropagation();
 
-                    navigateToLocation(location)
+                    handleLocationSelect(location); // Open confirmation modal on marker click
                 });
 
                 locationPins.push(marker);
@@ -281,7 +301,7 @@ export default function CartView() {
                     <ul id="destinations">
                         {locations.map((location) => (
                             <li className={clsx('destination-item', { selected: currentLocation == location.name })} role='button' key={location.name}
-                                onClick={() => navigateToLocation(location)}>{location.name}</li>
+                                onClick={() => handleLocationSelect(location)}>{location.name}</li>
                         ))}
                     </ul>
                     <div id='trip-info-container'>
@@ -365,6 +385,39 @@ export default function CartView() {
                         </li>
                     </ul>
                 )}
+            </Modal>
+
+            {/* Confirmation Modal */}
+            <Modal
+                title={<span className="modal-title">Are You Sure?</span>}
+                open={isConfirmationModalOpen}
+                onOk={handleConfirmation}
+                onCancel={handleConfirmationCancel}
+                footer={[
+                    <Button key="cancel" type="default" onClick={handleConfirmationCancel}>
+                        Cancel
+                    </Button>,
+                    <Button key="confirm" type="primary" className="modal-close-button" onClick={handleConfirmation}>
+                        Confirm
+                    </Button>
+                ]}
+                width="40%"
+                className="custom-modal"
+                closable={false}
+                style={{ top: '10%' }}
+                bodyStyle={{ 
+                    padding: '24px', // Add padding to the body
+                    backgroundColor: 'var(--jmu-gold)', 
+                    height: 'auto', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', // Center content horizontally
+                    textAlign: 'center', // Center text
+                    fontSize: '1.2rem', // Increase font size
+                }}
+            >
+                <p>Are you sure you want to navigate to {selectedLocation?.name}?</p>
             </Modal>
         </>
     );
