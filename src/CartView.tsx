@@ -18,9 +18,8 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
 import { Button, Flex, Modal } from "antd"; // Import Modal from Ant Design
-import { FaStop } from "react-icons/fa6";
 import { FaStopCircle } from "react-icons/fa";
-import { IoCall, IoWarning } from "react-icons/io5";
+import { IoCall } from "react-icons/io5";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -70,8 +69,7 @@ export default function CartView() {
 
     const handleConfirmation = () => {
         if (selectedLocation) {
-            navigateTo(selectedLocation.lat, selectedLocation.long); // Navigate to the selected location
-            setCurrentLocation(selectedLocation.name); // Set the current location
+            navigateToLocation(selectedLocation)
         }
         setIsConfirmationModalOpen(false); // Close the confirmation modal
     };
@@ -328,7 +326,7 @@ export default function CartView() {
 
             {/* Ant Design Modal For Additional Location Infrormation */}
             <Modal
-                title={<span className="modal-title">Learn More</span>}
+                title="Learn More"
                 open={isModalOpen}
                 onOk={handleOk}
                 onCancel={handleCancel}
@@ -338,23 +336,25 @@ export default function CartView() {
                             Back
                         </Button>
                     ),
-                    <Button key="close" type="primary" className="modal-close-button" onClick={handleCancel}>
+                    <Button key="close" type="primary" danger onClick={handleCancel}>
                         Close
                     </Button>
                 ]}
-                width={currentLink ? "85%" : "40%"} 
-                className="custom-modal"
-                closable={false} 
-                style={{ top: '10%' }}
-                bodyStyle={{ 
-                    padding: 0, 
-                    backgroundColor: 'var(--jmu-gold)', 
-                    height: currentLink ? '75vh' : 'auto', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    justifyContent: 'center', 
-                    alignItems: 'flex-start', 
-                    textAlign: 'left', 
+                width={currentLink ? "85%" : "40%"}
+                className="custom-modal learn-more-modal"
+                closable={false}
+                style={{ top: '8px' }}
+                styles={{
+                    body: {
+                        padding: 0,
+                        backgroundColor: 'var(--jmu-gold)',
+                        height: currentLink ? 'calc(80vh)' : 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'flex-start',
+                        textAlign: 'left',
+                    }
                 }}
             >
                 {currentLink ? (
@@ -365,39 +365,28 @@ export default function CartView() {
                     />
                 ) : (
                     <ul className="modal-link-list">
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/592720?s/Fest")}>
-                            Festival Conference & Student Center
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/623291?s/P.O")}>
-                            P.O.D. in EnGeo
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576622?s/Ches")}>
-                            Chesapeake Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/")}>
-                            King Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!bm/?ct/0?m/623302?s/Paul")}>
-                            Paul Jennings Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!bm/?ct/0?m/622822?s/E-hall")}>
-                            E-Hall
-                        </li>
+                        {locations.map(location => {
+                            if (location.url) return (
+                                <li className="modal-link-item" onClick={() => handleLinkClick(location.url)}>
+                                    {location.name}
+                                </li>
+                            )
+                        })}
                     </ul>
                 )}
             </Modal>
 
             {/* Confirmation Modal */}
             <Modal
-                title={<span className="modal-title">Are You Sure?</span>}
+                title="Are You Sure?"
                 open={isConfirmationModalOpen}
                 onOk={handleConfirmation}
                 onCancel={handleConfirmationCancel}
                 footer={[
-                    <Button key="cancel" type="default" onClick={handleConfirmationCancel}>
+                    <Button key="cancel" type="default" danger onClick={handleConfirmationCancel}>
                         Cancel
                     </Button>,
-                    <Button key="confirm" type="primary" className="modal-close-button" onClick={handleConfirmation}>
+                    <Button key="confirm" type="primary" onClick={handleConfirmation}>
                         Confirm
                     </Button>
                 ]}
@@ -405,16 +394,18 @@ export default function CartView() {
                 className="custom-modal"
                 closable={false}
                 style={{ top: '30%' }}
-                bodyStyle={{ 
-                    padding: '24px', // Add padding to the body
-                    backgroundColor: 'var(--jmu-gold)', 
-                    height: 'auto', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', // Center content horizontally
-                    textAlign: 'center', // Center text
-                    fontSize: '1.2rem', // Increase font size
+                styles={{
+                    body: {
+                        padding: '24px', // Add padding to the body
+                        backgroundColor: 'var(--jmu-gold)',
+                        height: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center', // Center content horizontally
+                        textAlign: 'center', // Center text
+                        fontSize: '1.2rem', // Increase font size
+                    }
                 }}
             >
                 <p>Are you sure you want to navigate to {selectedLocation?.name}?</p>
