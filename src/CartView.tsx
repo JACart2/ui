@@ -26,8 +26,10 @@ export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
     const mapRef = useRef(null);
     const [currentLocation, setCurrentLocation] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
+    const [isModalOpen, setIsModalOpen] = useState(false); // State for additional info modal
     const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal
+    const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null); // State to store the selected location for confirmation
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -65,6 +67,23 @@ export default function CartView() {
 
     const handleBack = () => {
         setCurrentLink(null); // Reset the current link to go back to the list of locations
+    };
+
+    const handleLocationSelect = (location: { lat: number, long: number, name: string }) => {
+        setSelectedLocation(location); // Store the selected location
+        setIsConfirmationModalOpen(true); // Open the confirmation modal
+    };
+
+    const handleConfirmation = () => {
+        if (selectedLocation) {
+            navigateToLocation(selectedLocation)
+        }
+        setIsConfirmationModalOpen(false); // Close the confirmation modal
+    };
+
+    const handleConfirmationCancel = () => {
+        setSelectedLocation(null); // Deselect the location
+        setIsConfirmationModalOpen(false); // Close the confirmation modal
     };
 
     function navigateTo(lat: number, lng: number) {
@@ -214,7 +233,7 @@ export default function CartView() {
                 marker.getElement().addEventListener('click', (e) => {
                     e.stopPropagation();
 
-                    navigateToLocation(location)
+                    handleLocationSelect(location); // Open confirmation modal on marker click
                 });
 
                 locationPins.push(marker);
@@ -281,7 +300,7 @@ export default function CartView() {
                     <ul id="destinations">
                         {locations.map((location) => (
                             <li className={clsx('destination-item', { selected: currentLocation == location.name })} role='button' key={location.name}
-                                onClick={() => navigateToLocation(location)}>{location.name}</li>
+                                onClick={() => handleLocationSelect(location)}>{location.name}</li>
                         ))}
                     </ul>
                     <div id='trip-info-container'>
@@ -325,7 +344,7 @@ export default function CartView() {
 
             {/* Ant Design Modal For Additional Location Infrormation */}
             <Modal
-                title={<span className="modal-title">Learn More</span>}
+                title="Learn More"
                 open={isModalOpen}
                 onOk={handleOk}
                 onCancel={handleCancel}
@@ -335,23 +354,25 @@ export default function CartView() {
                             Back
                         </Button>
                     ),
-                    <Button key="close" type="primary" className="modal-close-button" onClick={handleCancel}>
+                    <Button key="close" type="primary" danger onClick={handleCancel}>
                         Close
                     </Button>
                 ]}
                 width={currentLink ? "85%" : "40%"}
-                className="custom-modal"
+                className="custom-modal learn-more-modal"
                 closable={false}
-                style={{ top: '10%' }}
-                bodyStyle={{
-                    padding: 0,
-                    backgroundColor: 'var(--jmu-gold)',
-                    height: currentLink ? '75vh' : 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'flex-start',
-                    textAlign: 'left',
+                style={{ top: '8px' }}
+                styles={{
+                    body: {
+                        padding: 0,
+                        backgroundColor: 'var(--jmu-gold)',
+                        height: currentLink ? 'calc(80vh)' : 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'flex-start',
+                        textAlign: 'left',
+                    }
                 }}
             >
                 {currentLink ? (
@@ -362,26 +383,50 @@ export default function CartView() {
                     />
                 ) : (
                     <ul className="modal-link-list">
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/592720?s/Fest")}>
-                            Festival Conference & Student Center
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/623291?s/P.O")}>
-                            P.O.D. in EnGeo
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576622?s/Ches")}>
-                            Chesapeake Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/")}>
-                            King Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!bm/?ct/0?m/623302?s/Paul")}>
-                            Paul Jennings Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!bm/?ct/0?m/622822?s/E-hall")}>
-                            E-Hall
-                        </li>
+                        {locations.map(location => {
+                            if (location.url) return (
+                                <li className="modal-link-item" onClick={() => handleLinkClick(location.url)}>
+                                    {location.name}
+                                </li>
+                            )
+                        })}
                     </ul>
                 )}
+            </Modal>
+
+            {/* Confirmation Modal */}
+            <Modal
+                title="Are You Sure?"
+                open={isConfirmationModalOpen}
+                onOk={handleConfirmation}
+                onCancel={handleConfirmationCancel}
+                footer={[
+                    <Button key="cancel" type="default" danger onClick={handleConfirmationCancel}>
+                        Cancel
+                    </Button>,
+                    <Button key="confirm" type="primary" onClick={handleConfirmation}>
+                        Confirm
+                    </Button>
+                ]}
+                width="40%"
+                className="custom-modal"
+                closable={false}
+                style={{ top: '30%' }}
+                styles={{
+                    body: {
+                        padding: '24px', // Add padding to the body
+                        backgroundColor: 'var(--jmu-gold)',
+                        height: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center', // Center content horizontally
+                        textAlign: 'center', // Center text
+                        fontSize: '1.2rem', // Increase font size
+                    }
+                }}
+            >
+                <p>Are you sure you want to navigate to {selectedLocation?.name}?</p>
             </Modal>
 
             {process.env.NODE_ENV === 'development' &&

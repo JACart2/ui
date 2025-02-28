@@ -44,7 +44,6 @@ h2 {
     left: 12px;
     right: 12px;
     height: 48px;
-
     font-weight: bold;
     font-size: large;
 }
@@ -138,22 +137,17 @@ ul#destinations li {
 }
 
 .custom-modal .ant-modal-footer .ant-btn {
-    background-color: var(--jmu-purple) !important;
-    border-color: var(--jmu-gold) !important;
-    color: white !important;
+    background-color: var(--jmu-purple);
+    border-color: var(--jmu-gold);
+    color: white;
     font-size: 1.2rem;
     font-weight: bold;
     margin: 0 auto;
+    padding: 18px 28px;
 }
 
 .modal-title {
     color: white;
-}
-
-.modal-close-button {
-    background-color: var(--jmu-purple) !important;
-    border-color: var(--jmu-purple) !important;
-    color: white !important;
 }
 
 .modal-iframe {
