@@ -18,8 +18,9 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
 import { Button, Flex, Modal } from "antd"; // Import Modal from Ant Design
-import { FaStopCircle } from "react-icons/fa";
+import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
+import DevMenu from "./ui/DevMenu";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -29,6 +30,12 @@ export default function CartView() {
     const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null); // State to store the selected location for confirmation
+
+    const [state, setState] = useState<VehicleState>({
+        is_navigating: false,
+        reached_destination: true,
+        stopped: false,
+    });
 
     const PIN_COLORS = [
         'red',
@@ -95,12 +102,6 @@ export default function CartView() {
             setCurrentLocation(location.name);
         }
     }
-
-    let state: VehicleState = {
-        is_navigating: false,
-        reached_destination: true,
-        stopped: false,
-    };
 
     useEffect(() => {
         if (mapRef.current == undefined) return;
@@ -241,7 +242,7 @@ export default function CartView() {
             vehicle_state.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
 
-                state = message as VehicleState;
+                setState(message as VehicleState);
                 console.log("Recieved vehicle state message:")
                 console.log(message);
                 if (state.reached_destination) {
@@ -314,9 +315,26 @@ export default function CartView() {
                     <div ref={mapRef} id="map"></div>
                     <Flex id="map-buttons" gap='middle'>
                         { /* TODO: Only show emergency stop button when cart is navigating */}
-                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
-                            Press for Emergency Stop
-                        </Button>
+
+                        {state.is_navigating &&
+                            <>
+                                {
+                                    state.stopped ?
+
+                                        <Button id="resume-trip" type="primary" size="large" icon={<FaPlayCircle />}>
+                                            Press to Resume Trip
+                                        </Button>
+
+                                        :
+
+                                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
+                                            Press for Emergency Stop
+                                        </Button>
+                                }
+
+                            </>
+                        }
+
                         <Button id="request-help" type="primary" size="large" icon={<IoCall />}>
                             Press to Request Help
                         </Button>
@@ -410,6 +428,10 @@ export default function CartView() {
             >
                 <p>Are you sure you want to navigate to {selectedLocation?.name}?</p>
             </Modal>
+
+            {process.env.NODE_ENV === 'development' &&
+                <DevMenu vehicleState={state} setVehicleState={setState}></DevMenu>
+            }
         </>
     );
 }
