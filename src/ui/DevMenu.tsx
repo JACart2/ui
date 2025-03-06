@@ -53,7 +53,8 @@ export default function DevMenu({ vehicleState, setVehicleState, isNewUser, setI
                 {/* Add a new switch for toggling new user state */}
                 <h3>User State</h3>
                 <div className="label-input">
-                    <Switch checked={isNewUser} onChange={(checked) => { closeDrawer(); setIsNewUser(checked) }} />
+                    <Switch checked={isNewUser} onChange={(checked) => { closeDrawer(); setIsNewUser(checked); editState({ is_navigating: checked }) }} />
+                    
                     <span>is_new_user</span>
                 </div>
             </Drawer>

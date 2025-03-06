@@ -53,6 +53,7 @@ export default function CartView() {
     const ref2 = useRef(null); // Ref for the map
     const ref3 = useRef(null); // Ref for the Additional Location Information button
     const ref4 = useRef(null); // Ref for the Request Help button
+    const ref5 = useRef(null);
 
     // Reusable button styles for the Tour component
     const tourButtonStyles = {
@@ -118,8 +119,8 @@ export default function CartView() {
             },
         },
         {
-            title: 'Request Help',
-            description: 'Press this button to request help if you need assistance.',
+            title: 'Emergency Stop Button',
+            description: 'Press this button to stop the cart if needed. This button will only be visible when the cart is Navigating. In order to resume navigation there will be a resume button located in the same spot',
             target: () => ref4.current,
             style: tourPopupStyles,
             nextButtonProps: {
@@ -131,6 +132,21 @@ export default function CartView() {
                 ...tourButtonStyles,
             },
         },
+        {
+            title: 'Request Help',
+            description: 'Press this button to request help if you need assistance.',
+            target: () => ref5.current,
+            style: tourPopupStyles,
+            nextButtonProps: {
+                children: 'Next',
+                ...tourButtonStyles,
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                ...tourButtonStyles,
+            },
+        },
+
     ];
 
     // Customize the design tokens for the Tour component
@@ -432,14 +448,14 @@ export default function CartView() {
                                             Press to Resume Trip
                                         </Button>
                                         :
-                                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
+                                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} ref={ref4} danger>
                                             Press for Emergency Stop
                                         </Button>
                                 }
                             </>
                         }
 
-                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref4}>
+                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
                             Press to Request Help
                         </Button>
                     </Flex>
@@ -536,8 +552,9 @@ export default function CartView() {
             {/* Ant Design Tour */}
             <Tour
                 open={isNewUser}
-                onClose={() => setIsNewUser(false)}
+                onClose={() => { setIsNewUser(false); setState({...state, stopped: true}); setState({...state, is_navigating: false}) }}
                 steps={steps}
+                
             />
 
             {process.env.NODE_ENV === 'development' &&
