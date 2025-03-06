@@ -17,7 +17,7 @@ import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTyp
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
-import { Button, Flex, Modal } from "antd"; // Import Modal from Ant Design
+import { Button, Flex, Modal, Tour, TourProps, ConfigProvider } from "antd"; // Import ConfigProvider
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
@@ -30,6 +30,7 @@ export default function CartView() {
     const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null); // State to store the selected location for confirmation
+    const [isNewUser, setIsNewUser] = useState(true); // State to track if the user is new
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -45,6 +46,152 @@ export default function CartView() {
         'purple',
         'pink',
         'skyblue'
+    ];
+
+    // Refs for Tour targets
+    const ref1 = useRef(null); // Ref for the first destination item
+    const ref2 = useRef(null); // Ref for the map
+    const ref3 = useRef(null); // Ref for the Additional Location Information button
+    const ref4 = useRef(null); // Ref for the Request Help button
+
+    // Customize the design tokens for the Tour component
+    const customTourTokens = {
+        closeBtnSize: 24, // Increase the size of the close button
+        primaryNextBtnHoverBg: 'var(--jmu-gold)', // Change hover background color of the Next button
+        primaryPrevBtnBg: 'var(--jmu-purple)', // Change background color of the Previous button
+        zIndexPopup: 1070, // Ensure the Tour popup has the correct z-index
+    };
+
+    // Tour steps
+    const steps: TourProps['steps'] = [
+        {
+            title: 'Select a Destination',
+            description: 'Here are the selectable destinations. Click one and then select Confirm for the cart to begin navigating.',
+            target: () => ref1.current,
+            style: {
+                maxWidth: '600px', // Increase the width of the popup
+                fontSize: '1.2rem', // Increase the font size
+                padding: '20px', // Add padding
+            },
+            nextButtonProps: {
+                children: 'Next',
+                style: {
+                    backgroundColor: 'var(--jmu-purple)', // JMU Purple background
+                    color: 'white', // White text
+                    border: 'none', // Remove border
+                    padding: '10px 20px', // Add padding
+                    fontSize: '1rem', // Increase font size
+                    borderRadius: '5px', // Rounded corners
+                },
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                style: {
+                    backgroundColor: 'var(--jmu-purple)', // JMU Purple background
+                    color: 'white', // White text
+                    border: 'none', // Remove border
+                    padding: '10px 20px', // Add padding
+                    fontSize: '1rem', // Increase font size
+                    borderRadius: '5px', // Rounded corners
+                },
+            },
+        },
+        {
+            title: 'Map View',
+            description: 'Here are the selectable locations on the map. You can also click on the markers to navigate.',
+            target: () => ref2.current,
+            style: {
+                maxWidth: '600px',
+                fontSize: '1.2rem',
+                padding: '20px',
+            },
+            nextButtonProps: {
+                children: 'Next',
+                style: {
+                    backgroundColor: 'var(--jmu-purple)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    fontSize: '1rem',
+                    borderRadius: '5px',
+                },
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                style: {
+                    backgroundColor: 'var(--jmu-purple)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    fontSize: '1rem',
+                    borderRadius: '5px',
+                },
+            },
+        },
+        {
+            title: 'Additional Location Information',
+            description: 'This button provides more in-depth information about all the selectable locations.',
+            target: () => ref3.current,
+            style: {
+                maxWidth: '600px',
+                fontSize: '1.2rem',
+                padding: '20px',
+            },
+            nextButtonProps: {
+                children: 'Next',
+                style: {
+                    backgroundColor: 'var(--jmu-purple)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    fontSize: '1rem',
+                    borderRadius: '5px',
+                },
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                style: {
+                    backgroundColor: 'var(--jmu-purple)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    fontSize: '1rem',
+                    borderRadius: '5px',
+                },
+            },
+        },
+        {
+            title: 'Request Help',
+            description: 'Press this button to request help if you need assistance.',
+            target: () => ref4.current,
+            style: {
+                maxWidth: '600px',
+                fontSize: '1.2rem',
+                padding: '20px',
+            },
+            nextButtonProps: {
+                children: 'Next',
+                style: {
+                    backgroundColor: 'var(--jmu-purple)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    fontSize: '1rem',
+                    borderRadius: '5px',
+                },
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                style: {
+                    backgroundColor: 'var(--jmu-purple)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    fontSize: '1rem',
+                    borderRadius: '5px',
+                },
+            },
+        },
     ];
 
     const showModal = () => {
@@ -293,26 +440,40 @@ export default function CartView() {
     }, []);
 
     return (
-        <>
+        <ConfigProvider
+            theme={{
+                components: {
+                    Tour: customTourTokens,
+                },
+            }}
+        >
             <div id="split">
                 <div id="sidebar">
                     <h2>Destinations</h2>
                     <ul id="destinations">
-                        {locations.map((location) => (
-                            <li className={clsx('destination-item', { selected: currentLocation == location.name })} role='button' key={location.name}
-                                onClick={() => handleLocationSelect(location)}>{location.name}</li>
+                        {locations.map((location, index) => (
+                            <li
+                                className={clsx('destination-item', { selected: currentLocation == location.name })}
+                                role='button'
+                                key={location.name}
+                                onClick={() => handleLocationSelect(location)}
+                                ref={index === 0 ? ref1 : null} // Attach ref to the first destination item
+                            >
+                                {location.name}
+                            </li>
                         ))}
                     </ul>
                     <div id='trip-info-container'>
                         <TripInfoCard name="My Cart" speed={6} tripProgress={50} />
                     </div>
-                    <Button id="info-button" size='large' onClick={showModal}>
+                    <Button id="info-button" size='large' onClick={showModal} ref={ref3}>
                         Additional Location Information
                     </Button>
                 </div>
 
                 <div id="map-container">
-                    <div ref={mapRef} id="map"></div>
+                    <div ref={mapRef} id="map"></div> {/* Map container */}
+                    <div ref={ref2} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}></div> {/* Overlay for Tour */}
                     <Flex id="map-buttons" gap='middle'>
                         { /* TODO: Only show emergency stop button when cart is navigating */}
 
@@ -320,29 +481,25 @@ export default function CartView() {
                             <>
                                 {
                                     state.stopped ?
-
                                         <Button id="resume-trip" type="primary" size="large" icon={<FaPlayCircle />}>
                                             Press to Resume Trip
                                         </Button>
-
                                         :
-
                                         <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
                                             Press for Emergency Stop
                                         </Button>
                                 }
-
                             </>
                         }
 
-                        <Button id="request-help" type="primary" size="large" icon={<IoCall />}>
+                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref4}>
                             Press to Request Help
                         </Button>
                     </Flex>
                 </div>
             </div>
 
-            {/* Ant Design Modal For Additional Location Infrormation */}
+            {/* Ant Design Modal For Additional Location Information */}
             <Modal
                 title="Learn More"
                 open={isModalOpen}
@@ -414,24 +571,31 @@ export default function CartView() {
                 style={{ top: '30%' }}
                 styles={{
                     body: {
-                        padding: '24px', // Add padding to the body
+                        padding: '24px',
                         backgroundColor: 'var(--jmu-gold)',
                         height: 'auto',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
-                        alignItems: 'center', // Center content horizontally
-                        textAlign: 'center', // Center text
-                        fontSize: '1.2rem', // Increase font size
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        fontSize: '1.2rem',
                     }
                 }}
             >
                 <p>Are you sure you want to navigate to {selectedLocation?.name}?</p>
             </Modal>
 
+            {/* Ant Design Tour */}
+            <Tour
+                open={isNewUser}
+                onClose={() => setIsNewUser(false)}
+                steps={steps}
+            />
+
             {process.env.NODE_ENV === 'development' &&
                 <DevMenu vehicleState={state} setVehicleState={setState}></DevMenu>
             }
-        </>
+        </ConfigProvider>
     );
 }
