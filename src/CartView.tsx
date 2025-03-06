@@ -58,19 +58,19 @@ export default function CartView() {
     const tourButtonStyles = {
         style: {
             backgroundColor: 'var(--jmu-purple)', // JMU Purple background
-            color: 'white', 
-            border: 'none', 
-            padding: '17px 25px', 
-            fontSize: '1.25rem', 
-            borderRadius: '5px', 
+            color: 'white',
+            border: 'none',
+            padding: '17px 25px',
+            fontSize: '1.25rem',
+            borderRadius: '5px',
         },
     };
 
     // Reusable popup styles for the Tour component
     const tourPopupStyles = {
-        maxWidth: '600px', 
-        fontSize: '1.2rem', 
-        padding: '20px', 
+        maxWidth: '600px',
+        fontSize: '1.2rem',
+        padding: '20px',
     };
 
     // Tour steps
@@ -93,42 +93,42 @@ export default function CartView() {
             title: 'Map View',
             description: 'Here are the selectable locations on the map. You can also click on the markers to navigate.',
             target: () => ref2.current,
-            style: tourPopupStyles, 
+            style: tourPopupStyles,
             nextButtonProps: {
                 children: 'Next',
-                ...tourButtonStyles, 
+                ...tourButtonStyles,
             },
             prevButtonProps: {
                 children: 'Previous',
-                ...tourButtonStyles, 
+                ...tourButtonStyles,
             },
         },
         {
             title: 'Additional Location Information',
             description: 'This button provides more in-depth information about all the selectable locations.',
             target: () => ref3.current,
-            style: tourPopupStyles, 
+            style: tourPopupStyles,
             nextButtonProps: {
                 children: 'Next',
-                ...tourButtonStyles, 
+                ...tourButtonStyles,
             },
             prevButtonProps: {
                 children: 'Previous',
-                ...tourButtonStyles, 
+                ...tourButtonStyles,
             },
         },
         {
             title: 'Request Help',
             description: 'Press this button to request help if you need assistance.',
             target: () => ref4.current,
-            style: tourPopupStyles, 
+            style: tourPopupStyles,
             nextButtonProps: {
                 children: 'Next',
-                ...tourButtonStyles, 
+                ...tourButtonStyles,
             },
             prevButtonProps: {
                 children: 'Previous',
-                ...tourButtonStyles, 
+                ...tourButtonStyles,
             },
         },
     ];
@@ -541,7 +541,8 @@ export default function CartView() {
             />
 
             {process.env.NODE_ENV === 'development' &&
-                <DevMenu vehicleState={state} setVehicleState={setState}></DevMenu>
+                <DevMenu vehicleState={state} setVehicleState={setState}
+                    isNewUser={isNewUser} setIsNewUser={setIsNewUser}></DevMenu>
             }
         </ConfigProvider>
     );
