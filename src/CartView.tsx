@@ -30,7 +30,7 @@ export default function CartView() {
     const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null); // State to store the selected location for confirmation
-    const [isNewUser, setIsNewUser] = useState(true); // State to track if the user is new
+    const [isNewUser, setIsNewUser] = useState(false); // State to track if the user is new
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -58,19 +58,19 @@ export default function CartView() {
     const tourButtonStyles = {
         style: {
             backgroundColor: 'var(--jmu-purple)', // JMU Purple background
-            color: 'white', // White text
-            border: 'none', // Remove border
-            padding: '10px 25px', // Add padding
-            fontSize: '1.25rem', // Increase font size
-            borderRadius: '5px', // Rounded corners
+            color: 'white', 
+            border: 'none', 
+            padding: '17px 25px', 
+            fontSize: '1.25rem', 
+            borderRadius: '5px', 
         },
     };
 
     // Reusable popup styles for the Tour component
     const tourPopupStyles = {
-        maxWidth: '600px', // Increase the width of the popup
-        fontSize: '1.2rem', // Increase the font size
-        padding: '20px', // Add padding
+        maxWidth: '600px', 
+        fontSize: '1.2rem', 
+        padding: '20px', 
     };
 
     // Tour steps
@@ -93,42 +93,42 @@ export default function CartView() {
             title: 'Map View',
             description: 'Here are the selectable locations on the map. You can also click on the markers to navigate.',
             target: () => ref2.current,
-            style: tourPopupStyles, // Apply reusable popup styles
+            style: tourPopupStyles, 
             nextButtonProps: {
                 children: 'Next',
-                ...tourButtonStyles, // Apply reusable button styles
+                ...tourButtonStyles, 
             },
             prevButtonProps: {
                 children: 'Previous',
-                ...tourButtonStyles, // Apply reusable button styles
+                ...tourButtonStyles, 
             },
         },
         {
             title: 'Additional Location Information',
             description: 'This button provides more in-depth information about all the selectable locations.',
             target: () => ref3.current,
-            style: tourPopupStyles, // Apply reusable popup styles
+            style: tourPopupStyles, 
             nextButtonProps: {
                 children: 'Next',
-                ...tourButtonStyles, // Apply reusable button styles
+                ...tourButtonStyles, 
             },
             prevButtonProps: {
                 children: 'Previous',
-                ...tourButtonStyles, // Apply reusable button styles
+                ...tourButtonStyles, 
             },
         },
         {
             title: 'Request Help',
             description: 'Press this button to request help if you need assistance.',
             target: () => ref4.current,
-            style: tourPopupStyles, // Apply reusable popup styles
+            style: tourPopupStyles, 
             nextButtonProps: {
                 children: 'Next',
-                ...tourButtonStyles, // Apply reusable button styles
+                ...tourButtonStyles, 
             },
             prevButtonProps: {
                 children: 'Previous',
-                ...tourButtonStyles, // Apply reusable button styles
+                ...tourButtonStyles, 
             },
         },
     ];
