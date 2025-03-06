@@ -54,12 +54,23 @@ export default function CartView() {
     const ref3 = useRef(null); // Ref for the Additional Location Information button
     const ref4 = useRef(null); // Ref for the Request Help button
 
-    // Customize the design tokens for the Tour component
-    const customTourTokens = {
-        closeBtnSize: 24, // Increase the size of the close button
-        primaryNextBtnHoverBg: 'var(--jmu-gold)', // Change hover background color of the Next button
-        primaryPrevBtnBg: 'var(--jmu-purple)', // Change background color of the Previous button
-        zIndexPopup: 1070, // Ensure the Tour popup has the correct z-index
+    // Reusable button styles for the Tour component
+    const tourButtonStyles = {
+        style: {
+            backgroundColor: 'var(--jmu-purple)', // JMU Purple background
+            color: 'white', // White text
+            border: 'none', // Remove border
+            padding: '10px 25px', // Add padding
+            fontSize: '1.25rem', // Increase font size
+            borderRadius: '5px', // Rounded corners
+        },
+    };
+
+    // Reusable popup styles for the Tour component
+    const tourPopupStyles = {
+        maxWidth: '600px', // Increase the width of the popup
+        fontSize: '1.2rem', // Increase the font size
+        padding: '20px', // Add padding
     };
 
     // Tour steps
@@ -68,131 +79,67 @@ export default function CartView() {
             title: 'Select a Destination',
             description: 'Here are the selectable destinations. Click one and then select Confirm for the cart to begin navigating.',
             target: () => ref1.current,
-            style: {
-                maxWidth: '600px', // Increase the width of the popup
-                fontSize: '1.2rem', // Increase the font size
-                padding: '20px', // Add padding
-            },
+            style: tourPopupStyles, // Apply reusable popup styles
             nextButtonProps: {
                 children: 'Next',
-                style: {
-                    backgroundColor: 'var(--jmu-purple)', // JMU Purple background
-                    color: 'white', // White text
-                    border: 'none', // Remove border
-                    padding: '10px 20px', // Add padding
-                    fontSize: '1rem', // Increase font size
-                    borderRadius: '5px', // Rounded corners
-                },
+                ...tourButtonStyles, // Apply reusable button styles
             },
             prevButtonProps: {
                 children: 'Previous',
-                style: {
-                    backgroundColor: 'var(--jmu-purple)', // JMU Purple background
-                    color: 'white', // White text
-                    border: 'none', // Remove border
-                    padding: '10px 20px', // Add padding
-                    fontSize: '1rem', // Increase font size
-                    borderRadius: '5px', // Rounded corners
-                },
+                ...tourButtonStyles, // Apply reusable button styles
             },
         },
         {
             title: 'Map View',
             description: 'Here are the selectable locations on the map. You can also click on the markers to navigate.',
             target: () => ref2.current,
-            style: {
-                maxWidth: '600px',
-                fontSize: '1.2rem',
-                padding: '20px',
-            },
+            style: tourPopupStyles, // Apply reusable popup styles
             nextButtonProps: {
                 children: 'Next',
-                style: {
-                    backgroundColor: 'var(--jmu-purple)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    fontSize: '1rem',
-                    borderRadius: '5px',
-                },
+                ...tourButtonStyles, // Apply reusable button styles
             },
             prevButtonProps: {
                 children: 'Previous',
-                style: {
-                    backgroundColor: 'var(--jmu-purple)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    fontSize: '1rem',
-                    borderRadius: '5px',
-                },
+                ...tourButtonStyles, // Apply reusable button styles
             },
         },
         {
             title: 'Additional Location Information',
             description: 'This button provides more in-depth information about all the selectable locations.',
             target: () => ref3.current,
-            style: {
-                maxWidth: '600px',
-                fontSize: '1.2rem',
-                padding: '20px',
-            },
+            style: tourPopupStyles, // Apply reusable popup styles
             nextButtonProps: {
                 children: 'Next',
-                style: {
-                    backgroundColor: 'var(--jmu-purple)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    fontSize: '1rem',
-                    borderRadius: '5px',
-                },
+                ...tourButtonStyles, // Apply reusable button styles
             },
             prevButtonProps: {
                 children: 'Previous',
-                style: {
-                    backgroundColor: 'var(--jmu-purple)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    fontSize: '1rem',
-                    borderRadius: '5px',
-                },
+                ...tourButtonStyles, // Apply reusable button styles
             },
         },
         {
             title: 'Request Help',
             description: 'Press this button to request help if you need assistance.',
             target: () => ref4.current,
-            style: {
-                maxWidth: '600px',
-                fontSize: '1.2rem',
-                padding: '20px',
-            },
+            style: tourPopupStyles, // Apply reusable popup styles
             nextButtonProps: {
                 children: 'Next',
-                style: {
-                    backgroundColor: 'var(--jmu-purple)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    fontSize: '1rem',
-                    borderRadius: '5px',
-                },
+                ...tourButtonStyles, // Apply reusable button styles
             },
             prevButtonProps: {
                 children: 'Previous',
-                style: {
-                    backgroundColor: 'var(--jmu-purple)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    fontSize: '1rem',
-                    borderRadius: '5px',
-                },
+                ...tourButtonStyles, // Apply reusable button styles
             },
         },
     ];
+
+    // Customize the design tokens for the Tour component
+    const customTourTokens = {
+        closeBtnSize: 26, // Increase the size of the close button
+        primaryNextBtnHoverBg: 'var(--jmu-gold)', // Change hover background color of the Next button
+        primaryPrevBtnBg: 'var(--jmu-purple)', // Change background color of the Previous button
+        zIndexPopup: 1070, // Ensure the Tour popup has the correct z-index
+    };
 
     const showModal = () => {
         setIsModalOpen(true);
