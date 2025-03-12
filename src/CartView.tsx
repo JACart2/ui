@@ -120,7 +120,7 @@ export default function CartView() {
         },
         {
             title: 'Emergency Stop Button',
-            description: 'Press this button to stop the cart if needed. This button will only be visible when the cart is Navigating. In order to resume navigation there will be a resume button located in the same spot',
+            description: 'Press this button to stop the cart if needed. This button will only be visible when the cart is Navigating. In order to resume navigation there will be a resume button located in the same spot.',
             target: () => ref4.current,
             style: tourPopupStyles,
             nextButtonProps: {
@@ -146,7 +146,6 @@ export default function CartView() {
                 ...tourButtonStyles,
             },
         },
-
     ];
 
     // Customize the design tokens for the Tour component
@@ -342,7 +341,7 @@ export default function CartView() {
                 marker.togglePopup();
                 marker.getElement().addEventListener('click', (e) => {
                     e.stopPropagation();
-
+                    console.log('Marker clicked:', location.name); // Debugging
                     handleLocationSelect(location); // Open confirmation modal on marker click
                 });
 
@@ -435,26 +434,32 @@ export default function CartView() {
                 </div>
 
                 <div id="map-container">
-                    <div ref={mapRef} id="map"></div> {/* Map container */}
-                    <div ref={ref2} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}></div> {/* Overlay for Tour */}
+                    <div ref={mapRef} id="map"></div>
+                    <div
+                        ref={ref2}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            pointerEvents: 'none', // Allow clicks to pass through to the map
+                        }}
+                    ></div>
                     <Flex id="map-buttons" gap='middle'>
-                        { /* TODO: Only show emergency stop button when cart is navigating */}
-
-                        {state.is_navigating &&
+                        {state.is_navigating && (
                             <>
-                                {
-                                    state.stopped ?
-                                        <Button id="resume-trip" type="primary" size="large" icon={<FaPlayCircle />}>
-                                            Press to Resume Trip
-                                        </Button>
-                                        :
-                                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} ref={ref4} danger>
-                                            Press for Emergency Stop
-                                        </Button>
-                                }
+                                {state.stopped ? (
+                                    <Button id="resume-trip" type="primary" size="large" icon={<FaPlayCircle />}>
+                                        Press to Resume Trip
+                                    </Button>
+                                ) : (
+                                    <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} ref={ref4} danger>
+                                        Press for Emergency Stop
+                                    </Button>
+                                )}
                             </>
-                        }
-
+                        )}
                         <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
                             Press to Request Help
                         </Button>
@@ -554,7 +559,6 @@ export default function CartView() {
                 open={isNewUser}
                 onClose={() => { setIsNewUser(false); setState({...state, stopped: true}); setState({...state, is_navigating: false}) }}
                 steps={steps}
-                
             />
 
             {process.env.NODE_ENV === 'development' &&
