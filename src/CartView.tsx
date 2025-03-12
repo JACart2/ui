@@ -17,20 +17,22 @@ import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTyp
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
-import { Button, Flex, Modal, Tour, TourProps, ConfigProvider } from "antd"; // Import ConfigProvider
+import { Button, Flex, Modal, Tour, TourProps, ConfigProvider, message } from "antd";
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
+import VoiceCommands from "./VoiceRecognition"; // Import the VoiceCommands component
+
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
     const mapRef = useRef(null);
     const [currentLocation, setCurrentLocation] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false); // State for additional info modal
-    const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
-    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal
-    const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null); // State to store the selected location for confirmation
-    const [isNewUser, setIsNewUser] = useState(false); // State to track if the user is new
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentLink, setCurrentLink] = useState<string | null>(null);
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null);
+    const [isNewUser, setIsNewUser] = useState(false);
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -49,16 +51,16 @@ export default function CartView() {
     ];
 
     // Refs for Tour targets
-    const ref1 = useRef(null); // Ref for the first destination item
-    const ref2 = useRef(null); // Ref for the map
-    const ref3 = useRef(null); // Ref for the Additional Location Information button
-    const ref4 = useRef(null); // Ref for the Request Help button
+    const ref1 = useRef(null);
+    const ref2 = useRef(null);
+    const ref3 = useRef(null);
+    const ref4 = useRef(null);
     const ref5 = useRef(null);
 
     // Reusable button styles for the Tour component
     const tourButtonStyles = {
         style: {
-            backgroundColor: 'var(--jmu-purple)', // JMU Purple background
+            backgroundColor: 'var(--jmu-purple)',
             color: 'white',
             border: 'none',
             padding: '17px 25px',
@@ -80,14 +82,14 @@ export default function CartView() {
             title: 'Select a Destination',
             description: 'Here are the selectable destinations. Click one and then select Confirm for the cart to begin navigating.',
             target: () => ref1.current,
-            style: tourPopupStyles, // Apply reusable popup styles
+            style: tourPopupStyles,
             nextButtonProps: {
                 children: 'Next',
-                ...tourButtonStyles, // Apply reusable button styles
+                ...tourButtonStyles,
             },
             prevButtonProps: {
                 children: 'Previous',
-                ...tourButtonStyles, // Apply reusable button styles
+                ...tourButtonStyles,
             },
         },
         {
@@ -150,10 +152,10 @@ export default function CartView() {
 
     // Customize the design tokens for the Tour component
     const customTourTokens = {
-        closeBtnSize: 26, // Increase the size of the close button
-        primaryNextBtnHoverBg: 'var(--jmu-gold)', // Change hover background color of the Next button
-        primaryPrevBtnBg: 'var(--jmu-purple)', // Change background color of the Previous button
-        zIndexPopup: 1070, // Ensure the Tour popup has the correct z-index
+        closeBtnSize: 26,
+        primaryNextBtnHoverBg: 'var(--jmu-gold)',
+        primaryPrevBtnBg: 'var(--jmu-purple)',
+        zIndexPopup: 1070,
     };
 
     const showModal = () => {
@@ -162,37 +164,71 @@ export default function CartView() {
 
     const handleOk = () => {
         setIsModalOpen(false);
-        setCurrentLink(null); // Reset the current link when modal is closed
+        setCurrentLink(null);
     };
 
     const handleCancel = () => {
         setIsModalOpen(false);
-        setCurrentLink(null); // Reset the current link when modal is closed
+        setCurrentLink(null);
     };
 
     const handleLinkClick = (url: string) => {
-        setCurrentLink(url); // Set the current link to display in the modal
+        setCurrentLink(url);
     };
 
     const handleBack = () => {
-        setCurrentLink(null); // Reset the current link to go back to the list of locations
+        setCurrentLink(null);
     };
 
     const handleLocationSelect = (location: { lat: number, long: number, name: string }) => {
-        setSelectedLocation(location); // Store the selected location
-        setIsConfirmationModalOpen(true); // Open the confirmation modal
+        setSelectedLocation(location);
+        setIsConfirmationModalOpen(true);
     };
 
     const handleConfirmation = () => {
         if (selectedLocation) {
             navigateToLocation(selectedLocation)
         }
-        setIsConfirmationModalOpen(false); // Close the confirmation modal
+        setIsConfirmationModalOpen(false);
     };
 
     const handleConfirmationCancel = () => {
-        setSelectedLocation(null); // Deselect the location
-        setIsConfirmationModalOpen(false); // Close the confirmation modal
+        setSelectedLocation(null);
+        setIsConfirmationModalOpen(false);
+    };
+
+    // Handle recognized commands
+    const handleCommand = (command: string) => {
+        console.log("Command received:", command);
+
+        if (command === "STOP") {
+            // Trigger emergency stop
+            if (state.is_navigating && !state.stopped) {
+                console.log("Stopping the cart...");
+                setState({ ...state, stopped: true });
+                message.success("Cart stopped.");
+            }
+        } else if (command === "HELP") {
+            // Trigger request help
+            console.log("Requesting help...");
+            message.info("Help requested.");
+        } else if (command.startsWith("GO TO")) {
+            // Navigate to a specific location
+            const locationName = command.replace("GO TO", "").trim();
+            const location = locations.find((loc) => loc.name === locationName);
+            if (location) {
+                console.log(`Navigating to ${locationName}...`);
+                navigateToLocation(location);
+                message.success(`Navigating to ${locationName}...`);
+            } else {
+                console.log(`Location "${locationName}" not found.`);
+                message.warning(`Location "${locationName}" not found.`);
+            }
+        } else {
+            // Handle unrecognized commands
+            console.log("Unrecognized command:", command);
+            message.warning("Unrecognized command.");
+        }
     };
 
     function navigateTo(lat: number, lng: number) {
@@ -278,7 +314,7 @@ export default function CartView() {
                     "line-cap": "round",
                 },
                 paint: {
-                    "line-color": "#bdcff0", // '#6495ED',
+                    "line-color": "#bdcff0",
                     "line-opacity": 1,
                     "line-width": [
                         "interpolate",
@@ -341,8 +377,8 @@ export default function CartView() {
                 marker.togglePopup();
                 marker.getElement().addEventListener('click', (e) => {
                     e.stopPropagation();
-                    console.log('Marker clicked:', location.name); // Debugging
-                    handleLocationSelect(location); // Open confirmation modal on marker click
+                    console.log('Marker clicked:', location.name);
+                    handleLocationSelect(location);
                 });
 
                 locationPins.push(marker);
@@ -419,12 +455,13 @@ export default function CartView() {
                                 role='button'
                                 key={location.name}
                                 onClick={() => handleLocationSelect(location)}
-                                ref={index === 0 ? ref1 : null} // Attach ref to the first destination item
+                                ref={index === 0 ? ref1 : null}
                             >
                                 {location.name}
                             </li>
                         ))}
                     </ul>
+                    <VoiceCommands onCommand={handleCommand} locations={locations} />
                     <div id='trip-info-container'>
                         <TripInfoCard name="My Cart" speed={6} tripProgress={50} />
                     </div>
@@ -443,7 +480,7 @@ export default function CartView() {
                             left: 0,
                             width: '100%',
                             height: '100%',
-                            pointerEvents: 'none', // Allow clicks to pass through to the map
+                            pointerEvents: 'none',
                         }}
                     ></div>
                     <Flex id="map-buttons" gap='middle'>
