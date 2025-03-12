@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { message } from "antd";
-
+import Fuse from 'fuse.js';
 
 interface VoiceCommandsProps {
     onCommand: (command: string) => void;
@@ -16,6 +16,12 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         browserSupportsSpeechRecognition,
     } = useSpeechRecognition();
 
+    // Create a Fuse instance for fuzzy matching
+    const fuse = new Fuse(locations, {
+        keys: ['name'],
+        threshold: 0.4, // Adjust the threshold for better matching
+    });
+
     // Define commands and their corresponding actions
     const commands = [
         {
@@ -28,12 +34,15 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         },
         {
             command: "GO TO *",
-            callback: (location: string) => {
-                const foundLocation = locations.find(loc => loc.name.toLowerCase() === location.toLowerCase());
-                if (foundLocation) {
-                    onCommand(`GO TO ${foundLocation.name}`);
+            callback: (spokenLocation: string) => {
+                // Use fuzzy matching to find the closest location
+                const results = fuse.search(spokenLocation);
+                if (results.length > 0) {
+                    const matchedLocation = results[0].item.name;
+                    onCommand(`GO TO ${matchedLocation}`);
                 } else {
-                    message.warning(`Location "${location}" not found.`);
+                    console.log(`Location "${spokenLocation}" not found.`);
+                    message.warning(`Location "${spokenLocation}" not found.`);
                 }
             },
         },
@@ -42,25 +51,23 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     // Start listening when the component mounts
     useEffect(() => {
         if (browserSupportsSpeechRecognition) {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(() => {
-                    SpeechRecognition.startListening({ continuous: true });
-                })
-                .catch((error) => {
-                    console.error("Microphone access denied:", error);
-                    message.warning("Microphone access denied. Please allow microphone access to use voice commands.");
-                });
+            SpeechRecognition.startListening({ continuous: true }); // Enable continuous listening
         } else {
             console.log("Your browser does not support speech recognition.");
             message.warning("Your browser does not support speech recognition.");
         }
     }, [browserSupportsSpeechRecognition]);
 
-    // Handle recognized commands
+    // Handle recognized commands with a delay
     useEffect(() => {
         if (transcript) {
-            console.log("Recognized:", transcript);
-            resetTranscript(); // Clear the transcript after processing
+            const delay = 500; // 500ms delay
+            const timeoutId = setTimeout(() => {
+                console.log("Recognized:", transcript);
+                resetTranscript(); // Clear the transcript after processing
+            }, delay);
+
+            return () => clearTimeout(timeoutId); // Cleanup timeout
         }
     }, [transcript, resetTranscript]);
 

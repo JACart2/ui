@@ -13,6 +13,7 @@
     "antd": "^5.24.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.4.2",
+    "fuse.js": "^7.1.0",
     "maplibre-gl": "^4.4.1",
     "ml-matrix": "^6.11.1",
     "pmtiles": "^3.0.6",

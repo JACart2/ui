@@ -23,7 +23,6 @@ import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
 import VoiceCommands from "./VoiceRecognition"; // Import the VoiceCommands component
 
-
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
     const mapRef = useRef(null);
