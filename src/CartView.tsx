@@ -195,21 +195,24 @@ export default function CartView() {
         setSelectedLocation(null);
         setIsConfirmationModalOpen(false);
     };
-    
+
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
-    
+
         // Normalize the command to lowercase
         const normalizedCommand = command.toLowerCase();
-    
+
         if (normalizedCommand === "stop") {
+            console.log("STOP command recognized"); // Log when the command is recognized
             if (state.is_navigating && !state.stopped) {
                 console.log("Stopping the cart...");
-                setState({ ...state, stopped: true });
+                setState((prevState) => ({ ...prevState, stopped: true })); // Use functional update
                 message.success("Cart stopped.");
+            } else {
+                console.log("Cart is not navigating or already stopped.");
             }
         } else if (normalizedCommand === "help") {
-            console.log("Requesting help...");
+            console.log("HELP command recognized"); // Log when the command is recognized
             message.info("Help requested.");
         } else if (normalizedCommand.startsWith("go to")) {
             const locationName = normalizedCommand.replace("go to", "").trim();
@@ -227,6 +230,25 @@ export default function CartView() {
             message.warning("Unrecognized command.");
         }
     };
+
+    // Log initial state
+    useEffect(() => {
+        console.log("Initial state:", state); // Log the initial state
+    }, []);
+
+    // Propagate stopped state to ROS
+    useEffect(() => {
+        if (state.stopped) {
+            console.log("Publishing STOP command to ROS...");
+            // Publish the STOP command to the ROS system
+            const stopMessage = new ROSLIB.Message({
+                stopped: true,
+            });
+            vehicle_state.publish(stopMessage);
+        }
+    }, [state.stopped]);
+
+    // ... (rest of the code remains unchanged)
 
     function navigateTo(lat: number, lng: number) {
         console.log(`Target Coordinates: ${lat}, ${lng}`);
