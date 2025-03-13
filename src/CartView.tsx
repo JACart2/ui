@@ -195,36 +195,34 @@ export default function CartView() {
         setSelectedLocation(null);
         setIsConfirmationModalOpen(false);
     };
-
-    // Handle recognized commands
+    
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
-
-        if (command === "STOP") {
-            // Trigger emergency stop
+    
+        // Normalize the command to lowercase
+        const normalizedCommand = command.toLowerCase();
+    
+        if (normalizedCommand === "stop") {
             if (state.is_navigating && !state.stopped) {
                 console.log("Stopping the cart...");
                 setState({ ...state, stopped: true });
                 message.success("Cart stopped.");
             }
-        } else if (command === "HELP") {
-            // Trigger request help
+        } else if (normalizedCommand === "help") {
             console.log("Requesting help...");
             message.info("Help requested.");
-        } else if (command.startsWith("GO TO")) {
-            // Navigate to a specific location
-            const locationName = command.replace("GO TO", "").trim();
-            const location = locations.find((loc) => loc.name === locationName);
+        } else if (normalizedCommand.startsWith("go to")) {
+            const locationName = normalizedCommand.replace("go to", "").trim();
+            const location = locations.find((loc) => loc.name.toLowerCase() === locationName);
             if (location) {
-                console.log(`Navigating to ${locationName}...`);
-                navigateToLocation(location);
-                message.success(`Navigating to ${locationName}...`);
+                console.log(`Navigating to ${location.name}...`);
+                setSelectedLocation(location);
+                setIsConfirmationModalOpen(true);
             } else {
                 console.log(`Location "${locationName}" not found.`);
                 message.warning(`Location "${locationName}" not found.`);
             }
         } else {
-            // Handle unrecognized commands
             console.log("Unrecognized command:", command);
             message.warning("Unrecognized command.");
         }

@@ -14,44 +14,61 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         listening,
         resetTranscript,
         browserSupportsSpeechRecognition,
-    } = useSpeechRecognition();
+    } = useSpeechRecognition({
+        commands: [
+            {
+                command: "stop",
+                callback: () => {
+                    console.log("STOP command recognized"); // Log when the command is recognized
+                    onCommand("STOP");
+                },
+            },
+            {
+                command: "help",
+                callback: () => {
+                    console.log("HELP command recognized"); // Log when the command is recognized
+                    onCommand("HELP");
+                },
+            },
+            {
+                command: "go to *",
+                callback: (spokenLocation: string) => {
+                    console.log("GO TO command recognized:", spokenLocation); // Log when the command is recognized
+                    const locationName = spokenLocation.trim().toLowerCase();
+                    const results = fuse.search(locationName);
+                    if (results.length > 0) {
+                        const matchedLocation = results[0].item.name;
+                        onCommand(`GO TO ${matchedLocation}`);
+                    } else {
+                        console.log(`Location "${spokenLocation}" not found.`);
+                        message.warning(`Location "${spokenLocation}" not found.`);
+                    }
+                },
+            },
+        ],
+    });
 
     // Create a Fuse instance for fuzzy matching
     const fuse = new Fuse(locations, {
         keys: ['name'],
-        threshold: 0.4, // Adjust the threshold for better matching
+        threshold: 0.4,
+        includeScore: true,
+        ignoreLocation: true,
+        shouldSort: true,
+        findAllMatches: true,
+        minMatchCharLength: 3,
+        // Normalize location names for matching
+        getFn: (obj, path) => {
+            const value = Fuse.config.getFn(obj, path);
+            return typeof value === 'string' ? value.toLowerCase() : value;
+        },
     });
-
-    // Define commands and their corresponding actions
-    const commands = [
-        {
-            command: "STOP",
-            callback: () => onCommand("STOP"),
-        },
-        {
-            command: "HELP",
-            callback: () => onCommand("HELP"),
-        },
-        {
-            command: "GO TO *",
-            callback: (spokenLocation: string) => {
-                // Use fuzzy matching to find the closest location
-                const results = fuse.search(spokenLocation);
-                if (results.length > 0) {
-                    const matchedLocation = results[0].item.name;
-                    onCommand(`GO TO ${matchedLocation}`);
-                } else {
-                    console.log(`Location "${spokenLocation}" not found.`);
-                    message.warning(`Location "${spokenLocation}" not found.`);
-                }
-            },
-        },
-    ];
 
     // Start listening when the component mounts
     useEffect(() => {
         if (browserSupportsSpeechRecognition) {
-            SpeechRecognition.startListening({ continuous: true }); // Enable continuous listening
+            console.log("Starting speech recognition..."); // Log when starting speech recognition
+            SpeechRecognition.startListening({ continuous: true });
         } else {
             console.log("Your browser does not support speech recognition.");
             message.warning("Your browser does not support speech recognition.");
@@ -61,9 +78,9 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     // Handle recognized commands with a delay
     useEffect(() => {
         if (transcript) {
-            const delay = 500; // 500ms delay
+            console.log("Raw transcript:", transcript); // Log the raw transcript
+            const delay = 700; // 600ms delay
             const timeoutId = setTimeout(() => {
-                console.log("Recognized:", transcript);
                 resetTranscript(); // Clear the transcript after processing
             }, delay);
 
