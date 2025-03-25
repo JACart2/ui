@@ -18,3 +18,5 @@ A user interface for autonomous navigation of a JACART.
 # Installation & Running
 `npm install`
 `npm run dev`
+`npm install regenerator-runtime`
+`npm install fuse.js`

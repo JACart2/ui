@@ -196,27 +196,34 @@ export default function CartView() {
         setIsConfirmationModalOpen(false);
     };
 
+    // In the handleCommand function in CartView.tsx, replace it with this:
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
 
-        // Normalize the command to lowercase
-        const normalizedCommand = command.toLowerCase();
-
-        if (normalizedCommand === "stop") {
-            console.log("STOP command recognized"); // Log when the command is recognized
+        if (command === "STOP") {
+            console.log("STOP command recognized");
             if (state.is_navigating && !state.stopped) {
                 console.log("Stopping the cart...");
-                setState((prevState) => ({ ...prevState, stopped: true })); // Use functional update
+                setState((prevState) => ({ ...prevState, stopped: true }));
                 message.success("Cart stopped.");
             } else {
                 console.log("Cart is not navigating or already stopped.");
             }
-        } else if (normalizedCommand === "help") {
-            console.log("HELP command recognized"); // Log when the command is recognized
+        } else if (command === "HELP") {
+            console.log("HELP command recognized");
             message.info("Help requested.");
-        } else if (normalizedCommand.startsWith("go to")) {
-            const locationName = normalizedCommand.replace("go to", "").trim();
-            const location = locations.find((loc) => loc.name.toLowerCase() === locationName);
+        } else if (command === "RESUME") {
+            console.log("RESUME command recognized");
+            if (state.stopped) {
+                console.log("Resuming the cart...");
+                setState((prevState) => ({ ...prevState, stopped: false }));
+                message.success("Cart resumed.");
+            } else {
+                console.log("Cart is not stopped.");
+            }
+        } else if (command.startsWith("GO TO")) {
+            const locationName = command.replace("GO TO", "").trim();
+            const location = locations.find((loc) => loc.name.toLowerCase() === locationName.toLowerCase());
             if (location) {
                 console.log(`Navigating to ${location.name}...`);
                 setSelectedLocation(location);

@@ -9,6 +9,13 @@ interface VoiceCommandsProps {
 }
 
 const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
+    const commandList = [
+        { name: "stop", action: "STOP" },
+        { name: "help", action: "HELP" },
+        { name: "resume", action: "RESUME" },
+        { name: "go to", action: "GO TO" }
+    ];
+
     const {
         transcript,
         listening,
@@ -17,57 +24,68 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     } = useSpeechRecognition({
         commands: [
             {
-                command: "stop",
-                callback: () => {
-                    console.log("STOP command recognized"); // Log when the command is recognized
-                    onCommand("STOP");
-                },
-            },
-            {
-                command: "help",
-                callback: () => {
-                    console.log("HELP command recognized"); // Log when the command is recognized
-                    onCommand("HELP");
-                },
-            },
-            {
-                command: "go to *",
-                callback: (spokenLocation: string) => {
-                    console.log("GO TO command recognized:", spokenLocation); // Log when the command is recognized
-                    const locationName = spokenLocation.trim().toLowerCase();
-                    const results = fuse.search(locationName);
-                    if (results.length > 0) {
-                        const matchedLocation = results[0].item.name;
-                        onCommand(`GO TO ${matchedLocation}`);
+                command: "Cart *",
+                callback: (spokenCommand: string) => {
+                    console.log("JACart command recognized:", spokenCommand);
+                    const commandParts = spokenCommand.trim().toLowerCase().split(' ');
+                    const mainCommand = commandParts[0];
+                    const additionalText = commandParts.slice(1).join(' ');
+
+                    // Fuzzy match the command
+                    const commandFuse = new Fuse(commandList, {
+                        keys: ['name'],
+                        threshold: 0.4,
+                        includeScore: true,
+                        minMatchCharLength: 2
+                    });
+
+                    const commandResults = commandFuse.search(mainCommand);
+                    
+                    if (commandResults.length > 0) {
+                        const matchedCommand = commandResults[0].item;
+                        
+                        if (matchedCommand.name === "go to") {
+                            // Handle location navigation
+                            const locationName = additionalText;
+                            const locationFuse = new Fuse(locations, {
+                                keys: ['name'],
+                                threshold: 0.4,
+                                includeScore: true,
+                                ignoreLocation: true,
+                                shouldSort: true,
+                                findAllMatches: true,
+                                minMatchCharLength: 3,
+                                getFn: (obj, path) => {
+                                    const value = Fuse.config.getFn(obj, path);
+                                    return typeof value === 'string' ? value.toLowerCase() : value;
+                                },
+                            });
+
+                            const locationResults = locationFuse.search(locationName);
+                            if (locationResults.length > 0) {
+                                const matchedLocation = locationResults[0].item.name;
+                                onCommand(`${matchedCommand.action} ${matchedLocation}`);
+                            } else {
+                                console.log(`Location "${additionalText}" not found.`);
+                                message.warning(`Location "${additionalText}" not found.`);
+                            }
+                        } else {
+                            // Handle other commands
+                            onCommand(matchedCommand.action);
+                        }
                     } else {
-                        console.log(`Location "${spokenLocation}" not found.`);
-                        message.warning(`Location "${spokenLocation}" not found.`);
+                        console.log(`Command "${mainCommand}" not recognized.`);
+                        message.warning(`Command "${mainCommand}" not recognized.`);
                     }
                 },
             },
         ],
     });
 
-    // Create a Fuse instance for fuzzy matching
-    const fuse = new Fuse(locations, {
-        keys: ['name'],
-        threshold: 0.4,
-        includeScore: true,
-        ignoreLocation: true,
-        shouldSort: true,
-        findAllMatches: true,
-        minMatchCharLength: 3,
-        // Normalize location names for matching
-        getFn: (obj, path) => {
-            const value = Fuse.config.getFn(obj, path);
-            return typeof value === 'string' ? value.toLowerCase() : value;
-        },
-    });
-
     // Start listening when the component mounts
     useEffect(() => {
         if (browserSupportsSpeechRecognition) {
-            console.log("Starting speech recognition..."); // Log when starting speech recognition
+            console.log("Starting speech recognition...");
             SpeechRecognition.startListening({ continuous: true });
         } else {
             console.log("Your browser does not support speech recognition.");
@@ -78,13 +96,13 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     // Handle recognized commands with a delay
     useEffect(() => {
         if (transcript) {
-            console.log("Raw transcript:", transcript); // Log the raw transcript
-            const delay = 700; // 600ms delay
+            console.log("Raw transcript:", transcript);
+            const delay = 70;
             const timeoutId = setTimeout(() => {
-                resetTranscript(); // Clear the transcript after processing
+                resetTranscript();
             }, delay);
 
-            return () => clearTimeout(timeoutId); // Cleanup timeout
+            return () => clearTimeout(timeoutId);
         }
     }, [transcript, resetTranscript]);
 
@@ -92,7 +110,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         <div>
             {listening && (
                 <div style={{ color: 'red', textAlign: 'center', marginTop: '10px' }}>
-                    🎤 Listening...
+                    🔴 Listening...
                 </div>
             )}
             {!browserSupportsSpeechRecognition && (
