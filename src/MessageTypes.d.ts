@@ -32,6 +32,23 @@ declare interface ColorRGBA {
   a: number;
 }
 
+
+declare interface Image {
+  header: Header;
+  height: number;
+  width: number;
+  encoding: string;
+  is_bigendian: number;
+  step: number;
+  data: string;     
+}
+
+declare interface CompressedImage {
+  header: Header;
+  format: String;
+  data: Uint8Array;     
+}
+
 declare interface ROSMarker {
   header: Header;
   ns: string;
