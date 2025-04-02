@@ -13,7 +13,9 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         { name: "stop", action: "STOP" },
         { name: "help", action: "HELP" },
         { name: "resume", action: "RESUME" },
-        { name: "go to", action: "GO TO" }
+        { name: "go to", action: "GO TO" },
+        { name: "confirm", action: "CONFIRM" }, // Add this line
+        { name: "cancel", action: "CANCEL" },
     ];
 
     const {

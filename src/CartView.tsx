@@ -196,10 +196,9 @@ export default function CartView() {
         setIsConfirmationModalOpen(false);
     };
 
-    // In the handleCommand function in CartView.tsx, replace it with this:
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
-
+    
         if (command === "STOP") {
             console.log("STOP command recognized");
             if (state.is_navigating && !state.stopped) {
@@ -228,9 +227,27 @@ export default function CartView() {
                 console.log(`Navigating to ${location.name}...`);
                 setSelectedLocation(location);
                 setIsConfirmationModalOpen(true);
+                message.info(`Say "James Confirm" to navigate to ${location.name} or "James Cancel" to cancel.`);
             } else {
                 console.log(`Location "${locationName}" not found.`);
                 message.warning(`Location "${locationName}" not found.`);
+            }
+        } else if (command === "CONFIRM") {
+            console.log("CONFIRM command recognized");
+            if (selectedLocation && isConfirmationModalOpen) {
+                handleConfirmation();
+                message.success(`Confirmed navigation to ${selectedLocation.name}`);
+            } else {
+                console.log("No location selected to confirm.");
+                message.warning("No location selected to confirm.");
+            }
+        } else if (command === "CANCEL") {
+            console.log("CANCEL command recognized");
+            if (isConfirmationModalOpen) {
+                handleConfirmationCancel();
+                message.info("Navigation canceled.");
+            } else {
+                console.log("No confirmation dialog to cancel.");
             }
         } else {
             console.log("Unrecognized command:", command);
