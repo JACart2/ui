@@ -24,7 +24,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     } = useSpeechRecognition({
         commands: [
             {
-                command: "Cart *",
+                command: "James *",
                 callback: (spokenCommand: string) => {
                     console.log("Cart command recognized:", spokenCommand);
                     const commandParts = spokenCommand.trim().toLowerCase().split(' ');
@@ -97,7 +97,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     useEffect(() => {
         if (transcript) {
             console.log("Raw transcript:", transcript);
-            const delay = 70;
+            const delay = 700;
             const timeoutId = setTimeout(() => {
                 resetTranscript();
             }, delay);
