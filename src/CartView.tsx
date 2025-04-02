@@ -22,6 +22,7 @@ import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
 import VoiceCommands from "./VoiceRecognition"; 
+import { useTTS } from './useTTS';
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -32,6 +33,7 @@ export default function CartView() {
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null);
     const [isNewUser, setIsNewUser] = useState(false);
+    const { speak } = useTTS();
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -181,11 +183,13 @@ export default function CartView() {
     const handleLocationSelect = (location: { lat: number, long: number, name: string }) => {
         setSelectedLocation(location);
         setIsConfirmationModalOpen(true);
+        speak(`Confirm to go to ${location.name}`);  
     };
 
     const handleConfirmation = () => {
         if (selectedLocation) {
-            navigateToLocation(selectedLocation)
+            speak(`Now navigating to ${selectedLocation.name}`);
+            navigateToLocation(selectedLocation);
         }
         setIsConfirmationModalOpen(false);
     };
@@ -204,18 +208,21 @@ export default function CartView() {
                 console.log("Stopping the cart...");
                 setState((prevState) => ({ ...prevState, stopped: true }));
                 message.success("Cart stopped.");
+                speak("Cart stopped");
             } else {
                 console.log("Cart is not navigating or already stopped.");
             }
         } else if (command === "HELP") {
             console.log("HELP command recognized");
             message.info("Help requested.");
+            speak("Help requested");
         } else if (command === "RESUME") {
             console.log("RESUME command recognized");
             if (state.stopped) {
                 console.log("Resuming the cart...");
                 setState((prevState) => ({ ...prevState, stopped: false }));
                 message.success("Cart resumed.");
+                speak("Cart resumed");
             } else {
                 console.log("Cart is not stopped.");
             }
@@ -227,30 +234,14 @@ export default function CartView() {
                 setSelectedLocation(location);
                 setIsConfirmationModalOpen(true);
                 message.info(`Say "James Confirm" to navigate to ${location.name} or "James Cancel" to cancel.`);
+                // Force a state update to ensure TTS works
+                setState(prev => ({ ...prev }));
+                speak(`Confirm to go to ${location.name}`);
             } else {
                 console.log(`Location "${locationName}" not found.`);
                 message.warning(`Location "${locationName}" not found.`);
+                speak(`Location ${locationName} not found`);
             }
-        } else if (command === "CONFIRM") {
-            console.log("CONFIRM command recognized");
-            if (selectedLocation && isConfirmationModalOpen) {
-                handleConfirmation();
-                message.success(`Confirmed navigation to ${selectedLocation.name}`);
-            } else {
-                console.log("No location selected to confirm.");
-                message.warning("No location selected to confirm.");
-            }
-        } else if (command === "CANCEL") {
-            console.log("CANCEL command recognized");
-            if (isConfirmationModalOpen) {
-                handleConfirmationCancel();
-                message.info("Navigation canceled.");
-            } else {
-                console.log("No confirmation dialog to cancel.");
-            }
-        } else {
-            console.log("Unrecognized command:", command);
-            message.warning("Unrecognized command.");
         }
     };
 
@@ -271,7 +262,6 @@ export default function CartView() {
         }
     }, [state.stopped]);
 
-    // ... (rest of the code remains unchanged)
 
     function navigateTo(lat: number, lng: number) {
         console.log(`Target Coordinates: ${lat}, ${lng}`);
@@ -428,10 +418,18 @@ export default function CartView() {
 
             vehicle_state.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
-
-                setState(message as VehicleState);
-                console.log("Recieved vehicle state message:")
+            
+                const newState = message as VehicleState;
+                setState(newState);
+                console.log("Received vehicle state message:");
                 console.log(message);
+                
+                // Add these lines for TTS feedback:
+                if (newState.reached_destination && currentLocation) {
+                    speak(`Arrived at ${currentLocation}`);
+                    setCurrentLocation(null);
+                }
+            
                 if (state.reached_destination) {
                     const source = map.current.getSource("remaining_path") as GeoJSONSource;
                     source.setData(LineString([]));
