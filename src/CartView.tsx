@@ -202,7 +202,6 @@ export default function CartView() {
         speak("Navigation cancelled");
     };
 
-    // In CartView.tsx, replace the handleCommand function with this:
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
 
