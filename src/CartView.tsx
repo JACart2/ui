@@ -262,6 +262,14 @@ export default function CartView() {
         }
     }, [state.stopped]);
 
+    useEffect(() => {
+        // This ensures the speech synthesis is ready
+        if ('speechSynthesis' in window) {
+            // Force a state update to ensure TTS works
+            setState(prev => ({ ...prev }));
+        }
+    }, []);
+
 
     function navigateTo(lat: number, lng: number) {
         console.log(`Target Coordinates: ${lat}, ${lng}`);
@@ -274,9 +282,10 @@ export default function CartView() {
 
     function navigateToLocation(location: { lat: number, long: number, name: string }) {
         if (!state.is_navigating) {
-            console.log("Navigating to: " + location.name)
-            navigateTo(location.lat, location.long);
+            console.log("Navigating to: " + location.name);
+            setState(prev => ({ ...prev, is_navigating: true }));
             setCurrentLocation(location.name);
+            navigateTo(location.lat, location.long);
         }
     }
 
@@ -416,21 +425,22 @@ export default function CartView() {
                 locationPins.push(marker);
             });
 
+            // Update the vehicle_state.subscribe callback in CartView.tsx
             vehicle_state.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
-            
+
                 const newState = message as VehicleState;
+                const prevState = state;
                 setState(newState);
-                console.log("Received vehicle state message:");
-                console.log(message);
                 
-                // Add these lines for TTS feedback:
-                if (newState.reached_destination && currentLocation) {
+                // Handle arrival announcement
+                if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
                     speak(`Arrived at ${currentLocation}`);
                     setCurrentLocation(null);
+                    setState(prev => ({ ...prev, is_navigating: false }));
                 }
-            
-                if (state.reached_destination) {
+
+                if (newState.reached_destination) {
                     const source = map.current.getSource("remaining_path") as GeoJSONSource;
                     source.setData(LineString([]));
                 }
@@ -491,7 +501,10 @@ export default function CartView() {
                     <ul id="destinations">
                         {locations.map((location, index) => (
                             <li
-                                className={clsx('destination-item', { selected: currentLocation == location.name })}
+                                className={clsx('destination-item', { 
+                                    selected: currentLocation === location.name || 
+                                            (selectedLocation?.name === location.name && isConfirmationModalOpen)
+                                })}
                                 role='button'
                                 key={location.name}
                                 onClick={() => handleLocationSelect(location)}
