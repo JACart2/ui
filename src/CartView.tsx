@@ -21,7 +21,7 @@ import { Button, Flex, Modal, Tour, TourProps, ConfigProvider, message } from "a
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
-import VoiceCommands from "./VoiceRecognition"; // Import the VoiceCommands component
+import VoiceCommands from "./VoiceRecognition"; 
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -149,7 +149,6 @@ export default function CartView() {
         },
     ];
 
-    // Customize the design tokens for the Tour component
     const customTourTokens = {
         closeBtnSize: 26,
         primaryNextBtnHoverBg: 'var(--jmu-gold)',
