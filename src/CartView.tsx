@@ -183,6 +183,7 @@ export default function CartView() {
     const handleLocationSelect = (location: { lat: number, long: number, name: string }) => {
         setSelectedLocation(location);
         setIsConfirmationModalOpen(true);
+        setCurrentLocation(null); // Clear current location when selecting a new one
         speak(`Confirm to go to ${location.name}`);  
     };
 
@@ -190,6 +191,7 @@ export default function CartView() {
         if (selectedLocation) {
             speak(`Now navigating to ${selectedLocation.name}`);
             navigateToLocation(selectedLocation);
+            setCurrentLocation(selectedLocation.name); // Set the new current location
         }
         setIsConfirmationModalOpen(false);
     };
@@ -197,11 +199,13 @@ export default function CartView() {
     const handleConfirmationCancel = () => {
         setSelectedLocation(null);
         setIsConfirmationModalOpen(false);
+        speak("Navigation cancelled");
     };
 
+    // In CartView.tsx, replace the handleCommand function with this:
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
-    
+
         if (command === "STOP") {
             console.log("STOP command recognized");
             if (state.is_navigating && !state.stopped) {
@@ -222,7 +226,7 @@ export default function CartView() {
                 console.log("Resuming the cart...");
                 setState((prevState) => ({ ...prevState, stopped: false }));
                 message.success("Cart resumed.");
-                speak("Cart resumed");
+                speak("Cart resuming navigation");
             } else {
                 console.log("Cart is not stopped.");
             }
@@ -234,7 +238,6 @@ export default function CartView() {
                 setSelectedLocation(location);
                 setIsConfirmationModalOpen(true);
                 message.info(`Say "James Confirm" to navigate to ${location.name} or "James Cancel" to cancel.`);
-                // Force a state update to ensure TTS works
                 setState(prev => ({ ...prev }));
                 speak(`Confirm to go to ${location.name}`);
             } else {
@@ -242,6 +245,12 @@ export default function CartView() {
                 message.warning(`Location "${locationName}" not found.`);
                 speak(`Location ${locationName} not found`);
             }
+        } else if (command === "CONFIRM" && isConfirmationModalOpen) {
+            console.log("CONFIRM command recognized");
+            handleConfirmation();
+        } else if (command === "CANCEL" && isConfirmationModalOpen) {
+            console.log("CANCEL command recognized");
+            handleConfirmationCancel();
         }
     };
 
@@ -428,7 +437,7 @@ export default function CartView() {
             // Update the vehicle_state.subscribe callback in CartView.tsx
             vehicle_state.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
-
+            
                 const newState = message as VehicleState;
                 const prevState = state;
                 setState(newState);
@@ -436,10 +445,10 @@ export default function CartView() {
                 // Handle arrival announcement
                 if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
                     speak(`Arrived at ${currentLocation}`);
-                    setCurrentLocation(null);
                     setState(prev => ({ ...prev, is_navigating: false }));
+                    // Don't clear currentLocation here to keep it highlighted
                 }
-
+            
                 if (newState.reached_destination) {
                     const source = map.current.getSource("remaining_path") as GeoJSONSource;
                     source.setData(LineString([]));
