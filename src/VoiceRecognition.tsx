@@ -26,7 +26,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
             {
                 command: "Cart *",
                 callback: (spokenCommand: string) => {
-                    console.log("JACart command recognized:", spokenCommand);
+                    console.log("Cart command recognized:", spokenCommand);
                     const commandParts = spokenCommand.trim().toLowerCase().split(' ');
                     const mainCommand = commandParts[0];
                     const additionalText = commandParts.slice(1).join(' ');
