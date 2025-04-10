@@ -5,7 +5,7 @@ import Fuse from 'fuse.js';
 
 interface VoiceCommandsProps {
     onCommand: (command: string) => void;
-    locations: { name: string }[];
+    locations: { name: string; displayName: string }[];
 }
 
 const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {

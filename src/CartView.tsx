@@ -31,7 +31,7 @@ export default function CartView() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentLink, setCurrentLink] = useState<string | null>(null);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
-    const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null);
+    const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string, displayName: string } | null>(null);
     const [isNewUser, setIsNewUser] = useState(false);
     const { speak } = useTTS();
 
@@ -180,11 +180,11 @@ export default function CartView() {
         setCurrentLink(null);
     };
 
-    const handleLocationSelect = (location: { lat: number, long: number, name: string }) => {
+    const handleLocationSelect = (location: { lat: number, long: number, name: string, displayName: string }) => {
         setSelectedLocation(location);
         setIsConfirmationModalOpen(true);
         setCurrentLocation(null); // Clear current location when selecting a new one
-        speak(`Confirm to go to ${location.name}`);  
+        speak(`Confirm to go to ${location.displayName}`);  
     };
 
     const handleConfirmation = () => {
@@ -204,7 +204,7 @@ export default function CartView() {
 
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
-
+    
         if (command === "STOP") {
             console.log("STOP command recognized");
             if (state.is_navigating && !state.stopped) {
@@ -233,12 +233,12 @@ export default function CartView() {
             const locationName = command.replace("GO TO", "").trim();
             const location = locations.find((loc) => loc.name.toLowerCase() === locationName.toLowerCase());
             if (location) {
-                console.log(`Navigating to ${location.name}...`);
+                console.log(`Navigating to ${location.displayName}...`);
                 setSelectedLocation(location);
                 setIsConfirmationModalOpen(true);
-                message.info(`Say "James Confirm" to navigate to ${location.name} or "James Cancel" to cancel.`);
+                message.info(`Say "James Confirm" to navigate to ${location.displayName} or "James Cancel" to cancel.`);
                 setState(prev => ({ ...prev }));
-                speak(`Confirm to go to ${location.name}`);
+                speak(`Confirm to go to ${location.displayName}`);
             } else {
                 console.log(`Location "${locationName}" not found.`);
                 message.warning(`Location "${locationName}" not found.`);
@@ -406,9 +406,9 @@ export default function CartView() {
             });
 
             // Dynamically populate Destinations list with data from locations.json
-            locations.forEach((location: { lat: number, long: number, name: string }, index) => {
+            locations.forEach((location: { lat: number, long: number, name: string, displayName: string }, index) => {
                 if (map.current == undefined) return;
-
+            
                 const popup = new Popup({
                     anchor: 'bottom',
                     className: 'location-popup',
@@ -416,20 +416,20 @@ export default function CartView() {
                     closeOnClick: false,
                     closeOnMove: false,
                 })
-                    .setText(location.name)
-
+                    .setText(location.displayName)
+            
                 const marker = new Marker({ color: PIN_COLORS[index] })
                     .setLngLat([location.long, location.lat])
                     .setPopup(popup)
                     .addTo(map.current);
-
+            
                 marker.togglePopup();
                 marker.getElement().addEventListener('click', (e) => {
                     e.stopPropagation();
-                    console.log('Marker clicked:', location.name);
+                    console.log('Marker clicked:', location.displayName);
                     handleLocationSelect(location);
                 });
-
+            
                 locationPins.push(marker);
             });
 
@@ -510,15 +510,15 @@ export default function CartView() {
                         {locations.map((location, index) => (
                             <li
                                 className={clsx('destination-item', { 
-                                    selected: currentLocation === location.name || 
-                                            (selectedLocation?.name === location.name && isConfirmationModalOpen)
+                                    selected: currentLocation === location.displayName || 
+                                            (selectedLocation?.displayName === location.displayName && isConfirmationModalOpen)
                                 })}
                                 role='button'
                                 key={location.name}
                                 onClick={() => handleLocationSelect(location)}
                                 ref={index === 0 ? ref1 : null}
                             >
-                                {location.name}
+                                {location.displayName}
                             </li>
                         ))}
                     </ul>
@@ -649,7 +649,7 @@ export default function CartView() {
                     }
                 }}
             >
-                <p>Are you sure you want to navigate to {selectedLocation?.name}?</p>
+                <p>Are you sure you want to navigate to {selectedLocation?.displayName}?</p>
             </Modal>
 
             {/* Ant Design Tour */}
