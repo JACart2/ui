@@ -23,6 +23,7 @@ import { Button, Flex, Modal } from "antd"; // Import Modal from Ant Design
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
+import { vehicleService } from "./services/vehicleService";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -105,8 +106,15 @@ export default function CartView() {
         }
     }
 
+    const registerCart = () => {
+        console.log("About to register...")
+        vehicleService.registerCart("James");
+    };
+
     useEffect(() => {
         if (mapRef.current == undefined) return;
+
+        registerCart();
 
         const protocol = new Protocol();
         maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -229,16 +237,16 @@ export default function CartView() {
                     rawData[i] = binaryData.charCodeAt(i);
                 }
 
-                const width = 640;  
-                const height = 360; 
-                const rgbaData = new Uint8ClampedArray(width * height * 4); 
+                const width = 640;
+                const height = 360;
+                const rgbaData = new Uint8ClampedArray(width * height * 4);
 
                 for (let i = 0; i < rawData.length; i += 4) {
                     const b = rawData[i];      // Blue
                     const g = rawData[i + 1];  // Green
                     const r = rawData[i + 2];  // Red
                     const a = rawData[i + 3];  // Alpha
-                    
+
                     rgbaData[i] = r;        // Red
                     rgbaData[i + 1] = g;    // Green
                     rgbaData[i + 2] = b;    // Blue
