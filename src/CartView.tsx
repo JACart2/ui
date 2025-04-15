@@ -158,6 +158,28 @@ export default function CartView() {
         zIndexPopup: 1070,
     };
 
+    const ros = new ROSLIB.Ros({
+        url: "http://localhost:5173/" // Replace with your ROS WebSocket URL if different
+      });
+      
+      ros.on("connection", () => {
+        console.log("Connected to ROS");
+      });
+      
+      ros.on("error", (error) => {
+        console.log("Error connecting to ROS: ", error);
+      });
+      
+      ros.on("close", () => {
+        console.log("Connection to ROS closed");
+      });
+
+    const stop_topic = new ROSLIB.Topic({
+        ros: ros,
+        name: "/set_manual_control",
+        messageType: "std_msgs/Bool"
+    });
+
     const showModal = () => {
         setIsModalOpen(true);
     };
@@ -209,7 +231,19 @@ export default function CartView() {
             console.log("STOP command recognized");
             if (state.is_navigating && !state.stopped) {
                 console.log("Stopping the cart...");
-                setState((prevState) => ({ ...prevState, stopped: true }));
+                // Publish true to manual control topic to enable emergency stop
+                const stopMsg = new ROSLIB.Message({ data: true });
+                stop_topic.publish(stopMsg);
+                
+                // Also publish to vehicle_state with stopped: true
+                const stateMsg = new ROSLIB.Message({
+                    is_navigating: false,
+                    reached_destination: false,
+                    stopped: true,
+                });
+                vehicle_state.publish(stateMsg);
+                
+                setState((prevState) => ({ ...prevState, stopped: true, is_navigating: false }));
                 message.success("Cart stopped.");
                 speak("Cart stopped");
             } else {
@@ -223,7 +257,19 @@ export default function CartView() {
             console.log("RESUME command recognized");
             if (state.stopped) {
                 console.log("Resuming the cart...");
-                setState((prevState) => ({ ...prevState, stopped: false }));
+                // Publish false to manual control topic to disable emergency stop
+                const resumeMsg = new ROSLIB.Message({ data: false });
+                stop_topic.publish(resumeMsg);
+                
+                // Also publish to vehicle_state with stopped: false
+                const stateMsg = new ROSLIB.Message({
+                    is_navigating: true,
+                    reached_destination: false,
+                    stopped: false,
+                });
+                vehicle_state.publish(stateMsg);
+                
+                setState((prevState) => ({ ...prevState, stopped: false, is_navigating: true }));
                 message.success("Cart resumed.");
                 speak("Cart resuming navigation");
             } else {
@@ -546,22 +592,36 @@ export default function CartView() {
                     ></div>
                     <Flex id="map-buttons" gap='middle'>
                         {state.is_navigating && (
-                            <>
-                                {state.stopped ? (
-                                    <Button id="resume-trip" type="primary" size="large" icon={<FaPlayCircle />}>
-                                        Press to Resume Trip
-                                    </Button>
-                                ) : (
-                                    <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} ref={ref4} danger>
-                                        Press for Emergency Stop
-                                    </Button>
-                                )}
-                            </>
-                        )}
-                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
-                            Press to Request Help
-                        </Button>
-                    </Flex>
+                                <>
+                                    {state.stopped ? (
+                                        <Button 
+                                            id="resume-trip" 
+                                            type="primary" 
+                                            size="large" 
+                                            icon={<FaPlayCircle />}
+                                            onClick={() => handleCommand("RESUME")}
+                                        >
+                                            Press to Resume Trip
+                                        </Button>
+                                    ) : (
+                                        <Button 
+                                            id="emergency-stop" 
+                                            type="primary" 
+                                            size="large" 
+                                            icon={<FaStopCircle />} 
+                                            ref={ref4} 
+                                            danger
+                                            onClick={() => handleCommand("STOP")}
+                                        >
+                                            Press for Emergency Stop
+                                        </Button>
+                                    )}
+                                </>
+                            )}
+                            <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
+                                Press to Request Help
+                            </Button>
+                        </Flex>
                 </div>
             </div>
 

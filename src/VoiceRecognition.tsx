@@ -36,7 +36,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                     // Fuzzy match the command
                     const commandFuse = new Fuse(commandList, {
                         keys: ['name'],
-                        threshold: 0.4,
+                        threshold: 0.6,
                         includeScore: true,
                         minMatchCharLength: 2
                     });
@@ -51,7 +51,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                             const locationName = additionalText;
                             const locationFuse = new Fuse(locations, {
                                 keys: ['name'],
-                                threshold: 0.4,
+                                threshold: 0.6,
                                 includeScore: true,
                                 ignoreLocation: true,
                                 shouldSort: true,
