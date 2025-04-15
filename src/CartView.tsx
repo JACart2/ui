@@ -491,7 +491,7 @@ export default function CartView() {
             </Modal>
 
             {process.env.NODE_ENV === 'development' &&
-                <DevMenu vehicleState={state} setVehicleState={setState}></DevMenu>
+                <DevMenu vehicleState={state} setVehicleState={setState} registerCart={registerCart}></DevMenu>
             }
         </>
     );

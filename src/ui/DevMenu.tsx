@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button, Drawer, Switch } from "antd";
+import { Button, Drawer, Input, Switch } from "antd";
 import { useState } from "react";
 import { FaCode } from "react-icons/fa6";
 
 import './DevMenu.css'
+import { vehicleService } from "../services/vehicleService";
 
-export default function DevMenu({ vehicleState, setVehicleState }: any) {
+export default function DevMenu({ vehicleState, setVehicleState, registerCart }: any) {
     const [open, setOpen] = useState(false);
 
     function openDrawer() {
@@ -21,6 +22,11 @@ export default function DevMenu({ vehicleState, setVehicleState }: any) {
             ...vehicleState,
             ...data
         })
+    }
+
+    function updateServerIP(ip: string) {
+        vehicleService.setServerIP(ip);
+        registerCart();
     }
 
     return (
@@ -44,6 +50,10 @@ export default function DevMenu({ vehicleState, setVehicleState }: any) {
                 <div className="label-input">
                     <Switch checked={vehicleState.stopped} onChange={(checked) => editState({ stopped: checked })}></Switch>
                     <span>stopped</span>
+                </div>
+                <div className="label-input">
+                    <Input onChange={(e) => updateServerIP(e.target.value)}></Input>
+                    <span>Server IP</span>
                 </div>
             </Drawer>
         </>

@@ -1,10 +1,19 @@
 console.log(import.meta.env);
 
-const SERVER_IP = import.meta.env.VITE_SERVER_IP ?? "http://172.28.71.175/";
+const DEFAULT_SERVER_IP =
+  import.meta.env.VITE_SERVER_IP ?? "http://172.28.71.175/";
 const VEHICLES_ENDPOINT = "api/vehicles/";
-const BASE_URL = SERVER_IP + VEHICLES_ENDPOINT;
 
 export const vehicleService = {
+  SERVER_IP: import.meta.env.VITE_SERVER_IP ?? "http://172.28.71.175/",
+  BASE_URL: DEFAULT_SERVER_IP + VEHICLES_ENDPOINT,
+
+  setServerIP(address: string) {
+    console.log(address);
+    this.SERVER_IP = address ?? DEFAULT_SERVER_IP;
+    this.BASE_URL = this.SERVER_IP + VEHICLES_ENDPOINT;
+  },
+
   registerCart(name: string) {
     const data = {
       port: 9090,
@@ -12,7 +21,7 @@ export const vehicleService = {
     };
 
     console.log("Registering...");
-    fetch(BASE_URL + "register", {
+    fetch(this.BASE_URL + "register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
