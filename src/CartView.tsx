@@ -206,12 +206,12 @@ export default function CartView() {
         setSelectedLocation(location);
         setIsConfirmationModalOpen(true);
         setCurrentLocation(null); // Clear current location when selecting a new one
-        speak(`Confirm to go to ${location.displayName}`);  
+        speak(`Confirm to go to ${location.name}`);  
     };
 
     const handleConfirmation = () => {
         if (selectedLocation) {
-            speak(`Now navigating to ${selectedLocation.displayName}`);
+            speak(`Now navigating to ${selectedLocation.name}`);
             navigateToLocation(selectedLocation);
             setCurrentLocation(selectedLocation.displayName); // Set the new current location using displayName
         }

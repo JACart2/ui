@@ -18,8 +18,8 @@ export const useTTS = () => {
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0; // Slightly slower than normal
-        utterance.pitch = 1.0;
+        utterance.rate = 1.5; 
+        utterance.pitch = 0.9;
         utterance.volume = 1.0;
 
         window.speechSynthesis.speak(utterance);
