@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as ROSLIB from "roslib";
 
 declare interface VehicleState extends ROSLIB.Message {

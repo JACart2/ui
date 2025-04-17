@@ -211,9 +211,9 @@ export default function CartView() {
 
     const handleConfirmation = () => {
         if (selectedLocation) {
-            speak(`Now navigating to ${selectedLocation.name}`);
+            speak(`Now navigating to ${selectedLocation.displayName}`);
             navigateToLocation(selectedLocation);
-            setCurrentLocation(selectedLocation.name); // Set the new current location
+            setCurrentLocation(selectedLocation.displayName); // Set the new current location using displayName
         }
         setIsConfirmationModalOpen(false);
     };
@@ -334,11 +334,11 @@ export default function CartView() {
         clicked_point.publish(target);
     }
 
-    function navigateToLocation(location: { lat: number, long: number, name: string }) {
+    function navigateToLocation(location: { lat: number, long: number, name: string, displayName: string }) {
         if (!state.is_navigating) {
-            console.log("Navigating to: " + location.name);
+            console.log("Navigating to: " + location.displayName);
             setState(prev => ({ ...prev, is_navigating: true }));
-            setCurrentLocation(location.name);
+            setCurrentLocation(location.displayName);
             navigateTo(location.lat, location.long);
         }
     }
@@ -491,7 +491,7 @@ export default function CartView() {
                 if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
                     speak(`Arrived at ${currentLocation}`);
                     setState(prev => ({ ...prev, is_navigating: false }));
-                    // Don't clear currentLocation here to keep it highlighted
+                    // Keep currentLocation set to maintain highlighting
                 }
             
                 if (newState.reached_destination) {
