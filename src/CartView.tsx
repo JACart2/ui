@@ -180,6 +180,12 @@ export default function CartView() {
         messageType: "std_msgs/Bool"
     });
 
+    const nav_cmd = new ROSLIB.Topic({
+        ros: ros,
+        name: "/nav_cmd",
+        messageType: "motor_control_interface/msg/VelAngle"
+    });
+
     const showModal = () => {
         setIsModalOpen(true);
     };
@@ -224,28 +230,42 @@ export default function CartView() {
         speak("Navigation cancelled");
     };
 
+    const stopCart = () => {
+        console.log("Initiating smooth stop...");
+        
+        // Publish zero velocity for smooth stop
+        const stopMsg = new ROSLIB.Message({
+            vel: 0.0,
+            angle: 0.0
+        });
+        nav_cmd.publish(stopMsg);
+        
+        // Update vehicle state - ensure we maintain reached_destination state
+        const stateMsg = new ROSLIB.Message({
+            is_navigating: false,
+            reached_destination: state.reached_destination, // Preserve this value
+            stopped: true,
+        });
+        vehicle_state.publish(stateMsg);
+        
+        // Use functional update to ensure we get latest state
+        setState(prev => ({
+            ...prev,
+            is_navigating: false,
+            stopped: true
+        }));
+        
+        message.success("Cart stopping smoothly...");
+        speak("Cart stopping");
+    };
+
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
     
         if (command === "STOP") {
             console.log("STOP command recognized");
             if (state.is_navigating && !state.stopped) {
-                console.log("Stopping the cart...");
-                // Publish true to manual control topic to enable emergency stop
-                const stopMsg = new ROSLIB.Message({ data: true });
-                stop_topic.publish(stopMsg);
-                
-                // Also publish to vehicle_state with stopped: true
-                const stateMsg = new ROSLIB.Message({
-                    is_navigating: false,
-                    reached_destination: false,
-                    stopped: true,
-                });
-                vehicle_state.publish(stateMsg);
-                
-                setState((prevState) => ({ ...prevState, stopped: true, is_navigating: false }));
-                message.success("Cart stopped.");
-                speak("Cart stopped");
+                stopCart();
             } else {
                 console.log("Cart is not navigating or already stopped.");
             }
@@ -479,26 +499,33 @@ export default function CartView() {
                 locationPins.push(marker);
             });
 
-            // Update the vehicle_state.subscribe callback in CartView.tsx
-            vehicle_state.subscribe((message: ROSLIB.Message) => {
-                if (map.current == undefined) return;
-            
-                const newState = message as VehicleState;
-                const prevState = state;
-                setState(newState);
+            useEffect(() => {
+                const callback = (message: ROSLIB.Message) => {
+                    if (map.current == undefined) return;
                 
-                // Handle arrival announcement
-                if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
-                    speak(`Arrived at ${currentLocation}`);
-                    setState(prev => ({ ...prev, is_navigating: false }));
-                    // Keep currentLocation set to maintain highlighting
-                }
-            
-                if (newState.reached_destination) {
-                    const source = map.current.getSource("remaining_path") as GeoJSONSource;
-                    source.setData(LineString([]));
-                }
-            });
+                    const newState = message as VehicleState;
+                    const prevState = state;
+                    setState(newState);
+                    
+                    if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
+                        speak(`Arrived at ${currentLocation}`);
+                        setState(prev => ({ ...prev, is_navigating: false }));
+                    }
+                
+                    if (newState.reached_destination) {
+                        const source = map.current.getSource("remaining_path") as GeoJSONSource;
+                        source.setData(LineString([]));
+                    }
+                };
+
+                // Subscribe and store the subscription ID
+                vehicle_state.subscribe(callback);
+
+                return () => {
+                    // Unsubscribe using the callback reference
+                    vehicle_state.unsubscribe(callback);
+                };
+            }, [speak, currentLocation, state.is_navigating]);
 
             limited_pose.subscribe(function (message: ROSLIB.Message) {
                 if (map.current == undefined) return;
@@ -591,37 +618,34 @@ export default function CartView() {
                         }}
                     ></div>
                     <Flex id="map-buttons" gap='middle'>
-                        {state.is_navigating && (
-                                <>
-                                    {state.stopped ? (
-                                        <Button 
-                                            id="resume-trip" 
-                                            type="primary" 
-                                            size="large" 
-                                            icon={<FaPlayCircle />}
-                                            onClick={() => handleCommand("RESUME")}
-                                        >
-                                            Press to Resume Trip
-                                        </Button>
-                                    ) : (
-                                        <Button 
-                                            id="emergency-stop" 
-                                            type="primary" 
-                                            size="large" 
-                                            icon={<FaStopCircle />} 
-                                            ref={ref4} 
-                                            danger
-                                            onClick={() => handleCommand("STOP")}
-                                        >
-                                            Press for Emergency Stop
-                                        </Button>
-                                    )}
-                                </>
-                            )}
-                            <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
-                                Press to Request Help
+                        {state.is_navigating ? (
+                            <Button 
+                                id="emergency-stop" 
+                                type="primary" 
+                                size="large" 
+                                icon={<FaStopCircle />} 
+                                ref={ref4} 
+                                danger
+                                onClick={stopCart}
+                            >
+                                Press for Emergency Stop
                             </Button>
-                        </Flex>
+                        ) : state.stopped ? (
+                            <Button 
+                                id="resume-trip" 
+                                type="primary" 
+                                size="large" 
+                                icon={<FaPlayCircle />}
+                                onClick={() => handleCommand("RESUME")}
+                            >
+                                Press to Resume Trip
+                            </Button>
+                        ) : null}
+                        
+                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
+                            Press to Request Help
+                        </Button>
+                    </Flex>
                 </div>
             </div>
 
