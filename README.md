@@ -18,6 +18,14 @@ A user interface for autonomous navigation of a JACART.
 # Prerequisites
 - [Node.js](https://nodejs.org/en)
 
+# Voice Commands
+- Command word: Say "James" before saying any commands for the cart to start listening.
+- Navigation Command: Say "go to [location]" and the cart will begin navigation once the selection is confirmed. 
+- Confirmation Command: Say "confirm" once a location is selected to begin navigation.
+- Cancellation Command: Say "cancel" to deselect a location.
+- Emergency Stop Command: Say "stop" to initiate a remote emergency stop during navigation.
+- Resume Command: Say "resume" to resume cart navigation after it has been stopped.
+
 # Installation & Running
 `npm install`
 `npm install regenerator-runtime`
