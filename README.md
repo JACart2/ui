@@ -11,6 +11,9 @@ A user interface for autonomous navigation of a JACART.
 - [pmtiles](https://www.npmjs.com/package/pmtiles): Provides protocol that enables loading map from a singular static file.
 - [Tilemaker](https://github.com/systemed/tilemaker/): Convert .osm.pbf file to .pmtiles
 - [Osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert): Convert .osm (exported from OSM) file to .osm.pbf
+- [react-speech-recognition](https://www.npmjs.com/package/react-speech-recognition): A React library for browser-based speech recognition.
+- [fuse.js](https://www.fusejs.io/): A fuzzy-search library to interpret partial or mispronounced commands.
+
 
 # Prerequisites
 - [Node.js](https://nodejs.org/en)
