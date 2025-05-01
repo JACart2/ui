@@ -19,12 +19,12 @@ A user interface for autonomous navigation of a JACART.
 - [Node.js](https://nodejs.org/en)
 
 # Voice Commands
-- Command word: Say "James" before saying any commands for the cart to start listening.
-- Navigation Command: Say "go to [location]" and the cart will begin navigation once the selection is confirmed. 
-- Confirmation Command: Say "confirm" once a location is selected to begin navigation.
-- Cancellation Command: Say "cancel" to deselect a location.
-- Emergency Stop Command: Say "stop" to initiate a remote emergency stop during navigation.
-- Resume Command: Say "resume" to resume cart navigation after it has been stopped.
+- Command word: Say __"James"__ before saying any commands for the cart to start listening.
+- Navigation Command: Say __"go to [location]"__ and the cart will begin navigation once the selection is confirmed. 
+- Confirmation Command: Say __"confirm"__ once a location is selected to begin navigation.
+- Cancellation Command: Say __"cancel"__ to deselect a location.
+- Emergency Stop Command: Say __"stop"__ to initiate a remote emergency stop during navigation.
+- Resume Command: Say __"resume"__ to resume cart navigation after it has been stopped.
 
 # Installation & Running
 `npm install`
