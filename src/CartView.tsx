@@ -12,7 +12,7 @@ import {
     limited_pose,
     left_image
 } from "./topics";
-import { Image } from "./MessageTypes";
+import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
 import locations from "./locations.json";
 import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTypes";
@@ -215,10 +215,10 @@ export default function CartView() {
             visual_path.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
 
-                const markers = message.markers as ROSMarker[];
+                const markers = message as ROSMarkerList;
                 console.log("visual_path Message:")
                 console.log(message)
-                visual_path_coordinates = markers.map((m) => rosToMapCoords(m.pose.position));
+                visual_path_coordinates = markers.markers.map((m) => rosToMapCoords(m.pose.position));
                 const source = map.current.getSource("visual_path") as GeoJSONSource;
                 source.setData(LineString(visual_path_coordinates));
             });
@@ -317,7 +317,7 @@ export default function CartView() {
                 if (map.current == undefined) return;
 
                 const poseWithCovariance = message as PoseWithCovarianceStamped;
-                const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.position);
+                const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.pose.position);
                 const source = map.current.getSource("limited_pose") as GeoJSONSource;
                 source.setData(point(x1, y1));
 
