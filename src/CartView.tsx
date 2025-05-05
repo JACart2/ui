@@ -216,6 +216,8 @@ export default function CartView() {
                 if (map.current == undefined) return;
 
                 const markers = message as ROSMarker[];
+                console.log("visual_path Message:")
+                console.log(message)
                 visual_path_coordinates = markers.map((m) => rosToMapCoords(m.pose.position));
                 const source = map.current.getSource("visual_path") as GeoJSONSource;
                 source.setData(LineString(visual_path_coordinates));
