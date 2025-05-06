@@ -15,24 +15,39 @@ import {
 import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
 import locations from "./locations.json";
-import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTypes";
+import { PoseWithCovarianceStamped, VehicleState } from "./MessageTypes";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
-import { Button, Flex, Modal } from "antd"; // Import Modal from Ant Design
+import { Button, Flex, Modal, Tour, TourProps, ConfigProvider, message } from "antd";
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
+import VoiceCommands from "./VoiceRecognition";
+import { useTTS } from './useTTS';
 import { vehicleService } from "./services/vehicleService";
+
+function LineString(coordinates: Position[]): GeoJSON {
+    return {
+        type: "Feature",
+        geometry: {
+            type: "LineString",
+            coordinates: coordinates,
+        },
+        properties: {}
+    };
+}
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
     const mapRef = useRef(null);
     const [currentLocation, setCurrentLocation] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false); // State for additional info modal
-    const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
-    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal
-    const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null); // State to store the selected location for confirmation
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentLink, setCurrentLink] = useState<string | null>(null);
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string, displayName: string } | null>(null);
+    const [isNewUser, setIsNewUser] = useState(false);
+    const { speak } = useTTS();
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -50,44 +65,299 @@ export default function CartView() {
         'skyblue'
     ];
 
+    // Refs for Tour targets
+    const ref1 = useRef(null);
+    const ref2 = useRef(null);
+    const ref3 = useRef(null);
+    const ref4 = useRef(null);
+    const ref5 = useRef(null);
+
+    // Reusable button styles for the Tour component
+    const tourButtonStyles = {
+        style: {
+            backgroundColor: 'var(--jmu-purple)',
+            color: 'white',
+            border: 'none',
+            padding: '17px 25px',
+            fontSize: '1.25rem',
+            borderRadius: '5px',
+        },
+    };
+
+    // Reusable popup styles for the Tour component
+    const tourPopupStyles = {
+        maxWidth: '600px',
+        fontSize: '1.2rem',
+        padding: '20px',
+    };
+
+    // Tour steps
+    const steps: TourProps['steps'] = [
+        {
+            title: 'Select a Destination',
+            description: 'Here are the selectable destinations. Click one and then select Confirm for the cart to begin navigating.',
+            target: () => ref1.current,
+            style: tourPopupStyles,
+            nextButtonProps: {
+                children: 'Next',
+                ...tourButtonStyles,
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                ...tourButtonStyles,
+            },
+        },
+        {
+            title: 'Map View',
+            description: 'Here are the selectable locations on the map. You can also click on the markers to navigate.',
+            target: () => ref2.current,
+            style: tourPopupStyles,
+            nextButtonProps: {
+                children: 'Next',
+                ...tourButtonStyles,
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                ...tourButtonStyles,
+            },
+        },
+        {
+            title: 'Additional Location Information',
+            description: 'This button provides more in-depth information about all the selectable locations.',
+            target: () => ref3.current,
+            style: tourPopupStyles,
+            nextButtonProps: {
+                children: 'Next',
+                ...tourButtonStyles,
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                ...tourButtonStyles,
+            },
+        },
+        {
+            title: 'Emergency Stop Button',
+            description: 'Press this button to stop the cart if needed. This button will only be visible when the cart is Navigating. In order to resume navigation there will be a resume button located in the same spot.',
+            target: () => ref4.current,
+            style: tourPopupStyles,
+            nextButtonProps: {
+                children: 'Next',
+                ...tourButtonStyles,
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                ...tourButtonStyles,
+            },
+        },
+        {
+            title: 'Request Help',
+            description: 'Press this button to request help if you need assistance.',
+            target: () => ref5.current,
+            style: tourPopupStyles,
+            nextButtonProps: {
+                children: 'Next',
+                ...tourButtonStyles,
+            },
+            prevButtonProps: {
+                children: 'Previous',
+                ...tourButtonStyles,
+            },
+        },
+    ];
+
+    const customTourTokens = {
+        closeBtnSize: 26,
+        primaryNextBtnHoverBg: 'var(--jmu-gold)',
+        primaryPrevBtnBg: 'var(--jmu-purple)',
+        zIndexPopup: 1070,
+    };
+
+    const ros = new ROSLIB.Ros({
+        url: "http://localhost:5173/" // Replace with your ROS WebSocket URL if different
+    });
+
+    ros.on("connection", () => {
+        console.log("Connected to ROS");
+    });
+
+    ros.on("error", (error) => {
+        console.log("Error connecting to ROS: ", error);
+    });
+
+    ros.on("close", () => {
+        console.log("Connection to ROS closed");
+    });
+
+    const stop_topic = new ROSLIB.Topic({
+        ros: ros,
+        name: "/set_manual_control",
+        messageType: "std_msgs/Bool"
+    });
+
+    const nav_cmd = new ROSLIB.Topic({
+        ros: ros,
+        name: "/nav_cmd",
+        messageType: "motor_control_interface/msg/VelAngle"
+    });
+
     const showModal = () => {
         setIsModalOpen(true);
     };
 
     const handleOk = () => {
         setIsModalOpen(false);
-        setCurrentLink(null); // Reset the current link when modal is closed
+        setCurrentLink(null);
     };
 
     const handleCancel = () => {
         setIsModalOpen(false);
-        setCurrentLink(null); // Reset the current link when modal is closed
+        setCurrentLink(null);
     };
 
     const handleLinkClick = (url: string) => {
-        setCurrentLink(url); // Set the current link to display in the modal
+        setCurrentLink(url);
     };
 
     const handleBack = () => {
-        setCurrentLink(null); // Reset the current link to go back to the list of locations
+        setCurrentLink(null);
     };
 
-    const handleLocationSelect = (location: { lat: number, long: number, name: string }) => {
-        setSelectedLocation(location); // Store the selected location
-        setIsConfirmationModalOpen(true); // Open the confirmation modal
+    const handleLocationSelect = (location: { lat: number, long: number, name: string, displayName: string }) => {
+        setSelectedLocation(location);
+        setIsConfirmationModalOpen(true);
+        setCurrentLocation(null); // Clear current location when selecting a new one
+        speak(`Confirm to go to ${location.name}`);
     };
 
     const handleConfirmation = () => {
         if (selectedLocation) {
-            navigateToLocation(selectedLocation)
+            speak(`Now navigating to ${selectedLocation.name}`);
+            navigateToLocation(selectedLocation);
+            setCurrentLocation(selectedLocation.displayName); // Set the new current location using displayName
         }
-        setIsConfirmationModalOpen(false); // Close the confirmation modal
+        setIsConfirmationModalOpen(false);
     };
 
     const handleConfirmationCancel = () => {
-        setSelectedLocation(null); // Deselect the location
-        setIsConfirmationModalOpen(false); // Close the confirmation modal
+        setSelectedLocation(null);
+        setIsConfirmationModalOpen(false);
+        speak("Navigation cancelled");
     };
+
+    const stopCart = () => {
+        console.log("Initiating smooth stop...");
+
+        // Publish zero velocity for smooth stop
+        const stopMsg = new ROSLIB.Message({
+            vel: 0.0,
+            angle: 0.0
+        });
+        nav_cmd.publish(stopMsg);
+
+        // Update vehicle state - ensure we maintain reached_destination state
+        const stateMsg = new ROSLIB.Message({
+            is_navigating: false,
+            reached_destination: state.reached_destination, // Preserve this value
+            stopped: true,
+        });
+        vehicle_state.publish(stateMsg);
+
+        // Use functional update to ensure we get latest state
+        setState(prev => ({
+            ...prev,
+            is_navigating: false,
+            stopped: true
+        }));
+
+        message.success("Cart stopping smoothly...");
+        speak("Cart stopping");
+    };
+
+    const handleCommand = (command: string) => {
+        console.log("Command received:", command);
+
+        if (command === "STOP") {
+            console.log("STOP command recognized");
+            if (state.is_navigating && !state.stopped) {
+                stopCart();
+            } else {
+                console.log("Cart is not navigating or already stopped.");
+            }
+        } else if (command === "HELP") {
+            console.log("HELP command recognized");
+            message.info("Help requested.");
+            speak("Help requested");
+        } else if (command === "RESUME") {
+            console.log("RESUME command recognized");
+            if (state.stopped) {
+                console.log("Resuming the cart...");
+                // Publish false to manual control topic to disable emergency stop
+                const resumeMsg = new ROSLIB.Message({ data: false });
+                stop_topic.publish(resumeMsg);
+
+                // Also publish to vehicle_state with stopped: false
+                const stateMsg = new ROSLIB.Message({
+                    is_navigating: true,
+                    reached_destination: false,
+                    stopped: false,
+                });
+                vehicle_state.publish(stateMsg);
+
+                setState((prevState) => ({ ...prevState, stopped: false, is_navigating: true }));
+                message.success("Cart resumed.");
+                speak("Cart resuming navigation");
+            } else {
+                console.log("Cart is not stopped.");
+            }
+        } else if (command.startsWith("GO TO")) {
+            const locationName = command.replace("GO TO", "").trim();
+            const location = locations.find((loc) => loc.name.toLowerCase() === locationName.toLowerCase());
+            if (location) {
+                console.log(`Navigating to ${location.displayName}...`);
+                setSelectedLocation(location);
+                setIsConfirmationModalOpen(true);
+                message.info(`Say "James Confirm" to navigate to ${location.displayName} or "James Cancel" to cancel.`);
+                setState(prev => ({ ...prev }));
+                speak(`Confirm to go to ${location.displayName}`);
+            } else {
+                console.log(`Location "${locationName}" not found.`);
+                message.warning(`Location "${locationName}" not found.`);
+                speak(`Location ${locationName} not found`);
+            }
+        } else if (command === "CONFIRM" && isConfirmationModalOpen) {
+            console.log("CONFIRM command recognized");
+            handleConfirmation();
+        } else if (command === "CANCEL" && isConfirmationModalOpen) {
+            console.log("CANCEL command recognized");
+            handleConfirmationCancel();
+        }
+    };
+
+    // Log initial state
+    useEffect(() => {
+        console.log("Initial state:", state); // Log the initial state
+    }, []);
+
+    // Propagate stopped state to ROS
+    useEffect(() => {
+        if (state.stopped) {
+            console.log("Publishing STOP command to ROS...");
+            // Publish the STOP command to the ROS system
+            const stopMessage = new ROSLIB.Message({
+                stopped: true,
+            });
+            vehicle_state.publish(stopMessage);
+        }
+    }, [state.stopped]);
+
+    useEffect(() => {
+        // This ensures the speech synthesis is ready
+        if ('speechSynthesis' in window) {
+            // Force a state update to ensure TTS works
+            setState(prev => ({ ...prev }));
+        }
+    }, []);
+
 
     function navigateTo(lat: number, lng: number) {
         console.log(`Target Coordinates: ${lat}, ${lng}`);
@@ -98,11 +368,12 @@ export default function CartView() {
         clicked_point.publish(target);
     }
 
-    function navigateToLocation(location: { lat: number, long: number, name: string }) {
+    function navigateToLocation(location: { lat: number, long: number, name: string, displayName: string }) {
         if (!state.is_navigating) {
-            console.log("Navigating to: " + location.name)
+            console.log("Navigating to: " + location.displayName);
+            setState(prev => ({ ...prev, is_navigating: true }));
+            setCurrentLocation(location.displayName);
             navigateTo(location.lat, location.long);
-            setCurrentLocation(location.name);
         }
     }
 
@@ -110,6 +381,35 @@ export default function CartView() {
         console.log("About to register...")
         vehicleService.registerCart("James");
     };
+
+
+    useEffect(() => {
+        const callback = (message: ROSLIB.Message) => {
+            if (map.current == undefined) return;
+
+            const newState = message as VehicleState;
+            const prevState = state;
+            setState(newState);
+
+            if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
+                speak(`Arrived at ${currentLocation}`);
+                setState(prev => ({ ...prev, is_navigating: false }));
+            }
+
+            if (newState.reached_destination) {
+                const source = map.current.getSource("remaining_path") as GeoJSONSource;
+                source.setData(LineString([]));
+            }
+        };
+
+        // Subscribe and store the subscription ID
+        vehicle_state.subscribe(callback);
+
+        return () => {
+            // Unsubscribe using the callback reference
+            vehicle_state.unsubscribe(callback);
+        };
+    }, [speak, currentLocation, state.is_navigating]);
 
     useEffect(() => {
         if (mapRef.current == undefined) return;
@@ -146,16 +446,6 @@ export default function CartView() {
 
             const image = await map.current.loadImage("osgeo-logo.png");
             map.current.addImage("custom-marker", image.data);
-            function LineString(coordinates: Position[]): GeoJSON {
-                return {
-                    type: "Feature",
-                    geometry: {
-                        type: "LineString",
-                        coordinates: coordinates,
-                    },
-                    properties: {}
-                };
-            }
             map.current.addSource("limited_pose", {
                 type: "geojson",
                 data: point(-78.869914, 38.435491),
@@ -179,7 +469,7 @@ export default function CartView() {
                     "line-cap": "round",
                 },
                 paint: {
-                    "line-color": "#bdcff0", // '#6495ED',
+                    "line-color": "#bdcff0",
                     "line-opacity": 1,
                     "line-width": [
                         "interpolate",
@@ -274,7 +564,7 @@ export default function CartView() {
             }
 
             // Dynamically populate Destinations list with data from locations.json
-            locations.forEach((location: { lat: number, long: number, name: string }, index) => {
+            locations.forEach((location: { lat: number, long: number, name: string, displayName: string }, index) => {
                 if (map.current == undefined) return;
 
                 const popup = new Popup({
@@ -284,7 +574,7 @@ export default function CartView() {
                     closeOnClick: false,
                     closeOnMove: false,
                 })
-                    .setText(location.name)
+                    .setText(location.displayName)
 
                 const marker = new Marker({ color: PIN_COLORS[index] })
                     .setLngLat([location.long, location.lat])
@@ -294,24 +584,13 @@ export default function CartView() {
                 marker.togglePopup();
                 marker.getElement().addEventListener('click', (e) => {
                     e.stopPropagation();
-
-                    handleLocationSelect(location); // Open confirmation modal on marker click
+                    console.log('Marker clicked:', location.displayName);
+                    handleLocationSelect(location);
                 });
 
                 locationPins.push(marker);
             });
 
-            vehicle_state.subscribe((message: ROSLIB.Message) => {
-                if (map.current == undefined) return;
-
-                setState(message as VehicleState);
-                console.log("Recieved vehicle state message:")
-                console.log(message);
-                if (state.reached_destination) {
-                    const source = map.current.getSource("remaining_path") as GeoJSONSource;
-                    source.setData(LineString([]));
-                }
-            });
 
             limited_pose.subscribe(function (message: ROSLIB.Message) {
                 if (map.current == undefined) return;
@@ -355,57 +634,88 @@ export default function CartView() {
     }, []);
 
     return (
-        <>
+        <ConfigProvider
+            theme={{
+                components: {
+                    Tour: customTourTokens,
+                },
+            }}
+        >
             <div id="split">
                 <div id="sidebar">
                     <img id="camera-image"></img>
                     <h2>Destinations</h2>
                     <ul id="destinations">
-                        {locations.map((location) => (
-                            <li className={clsx('destination-item', { selected: currentLocation == location.name })} role='button' key={location.name}
-                                onClick={() => handleLocationSelect(location)}>{location.name}</li>
+                        {locations.map((location, index) => (
+                            <li
+                                className={clsx('destination-item', {
+                                    selected: currentLocation === location.displayName ||
+                                        (selectedLocation?.displayName === location.displayName && isConfirmationModalOpen)
+                                })}
+                                role='button'
+                                key={location.name}
+                                onClick={() => handleLocationSelect(location)}
+                                ref={index === 0 ? ref1 : null}
+                            >
+                                {location.displayName}
+                            </li>
                         ))}
                     </ul>
+                    <VoiceCommands onCommand={handleCommand} locations={locations} />
                     <div id='trip-info-container'>
                         <TripInfoCard name="My Cart" speed={6} tripProgress={50} />
                     </div>
-                    <Button id="info-button" size='large' onClick={showModal}>
+                    <Button id="info-button" size='large' onClick={showModal} ref={ref3}>
                         Additional Location Information
                     </Button>
                 </div>
 
                 <div id="map-container">
                     <div ref={mapRef} id="map"></div>
+                    <div
+                        ref={ref2}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            pointerEvents: 'none',
+                        }}
+                    ></div>
                     <Flex id="map-buttons" gap='middle'>
-                        { /* TODO: Only show emergency stop button when cart is navigating */}
+                        {state.is_navigating ? (
+                            <Button
+                                id="emergency-stop"
+                                type="primary"
+                                size="large"
+                                icon={<FaStopCircle />}
+                                ref={ref4}
+                                danger
+                                onClick={stopCart}
+                            >
+                                Press for Emergency Stop
+                            </Button>
+                        ) : state.stopped ? (
+                            <Button
+                                id="resume-trip"
+                                type="primary"
+                                size="large"
+                                icon={<FaPlayCircle />}
+                                onClick={() => handleCommand("RESUME")}
+                            >
+                                Press to Resume Trip
+                            </Button>
+                        ) : null}
 
-                        {state.is_navigating &&
-                            <>
-                                {
-                                    state.stopped ?
-
-                                        <Button id="resume-trip" type="primary" size="large" icon={<FaPlayCircle />}>
-                                            Press to Resume Trip
-                                        </Button>
-
-                                        :
-
-                                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
-                                            Press for Emergency Stop
-                                        </Button>
-                                }
-
-                            </>
-                        }
-
-                        <Button id="request-help" type="primary" size="large" icon={<IoCall />}>
+                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
                             Press to Request Help
                         </Button>
                     </Flex>
                 </div>
             </div>
 
-            {/* Ant Design Modal For Additional Location Infrormation */}
+            {/* Ant Design Modal For Additional Location Information */}
             <Modal
                 title="Learn More"
                 open={isModalOpen}
@@ -477,24 +787,31 @@ export default function CartView() {
                 style={{ top: '30%' }}
                 styles={{
                     body: {
-                        padding: '24px', // Add padding to the body
+                        padding: '24px',
                         backgroundColor: 'var(--jmu-gold)',
                         height: 'auto',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
-                        alignItems: 'center', // Center content horizontally
-                        textAlign: 'center', // Center text
-                        fontSize: '1.2rem', // Increase font size
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        fontSize: '1.2rem',
                     }
                 }}
             >
-                <p>Are you sure you want to navigate to {selectedLocation?.name}?</p>
+                <p>Are you sure you want to navigate to {selectedLocation?.displayName}?</p>
             </Modal>
 
+            {/* Ant Design Tour */}
+            <Tour
+                open={isNewUser}
+                onClose={() => { setIsNewUser(false); setState({ ...state, stopped: true }); setState({ ...state, is_navigating: false }) }}
+                steps={steps}
+            />
+
             {process.env.NODE_ENV === 'development' &&
-                <DevMenu vehicleState={state} setVehicleState={setState} registerCart={registerCart}></DevMenu>
+                <DevMenu vehicleState={state} setVehicleState={setState} registerCart={registerCart} isNewUser={isNewUser} setIsNewUser={setIsNewUser}></DevMenu>
             }
-        </>
+        </ConfigProvider>
     );
 }

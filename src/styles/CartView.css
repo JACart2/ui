@@ -9,7 +9,7 @@
     display: flex;
     font-family: Arial;
     flex-direction: column;
-    gap: 8px;
+    /* gap: 8px; */
     box-shadow: inset 0 0 12px #00000040;
 }
 

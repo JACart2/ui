@@ -11,10 +11,23 @@ A user interface for autonomous navigation of a JACART.
 - [pmtiles](https://www.npmjs.com/package/pmtiles): Provides protocol that enables loading map from a singular static file.
 - [Tilemaker](https://github.com/systemed/tilemaker/): Convert .osm.pbf file to .pmtiles
 - [Osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert): Convert .osm (exported from OSM) file to .osm.pbf
+- [react-speech-recognition](https://www.npmjs.com/package/react-speech-recognition): A React library for browser-based speech recognition.
+- [fuse.js](https://www.fusejs.io/): A fuzzy-search library to interpret partial or mispronounced commands.
+
 
 # Prerequisites
 - [Node.js](https://nodejs.org/en)
 
+# Voice Commands
+- Command word: Say __"James"__ before saying any commands for the cart to start listening.
+- Navigation Command: Say __"go to [location]"__ and the cart will begin navigation once the selection is confirmed. 
+- Confirmation Command: Say __"confirm"__ once a location is selected to begin navigation.
+- Cancellation Command: Say __"cancel"__ to deselect a location.
+- Emergency Stop Command: Say __"stop"__ to initiate a remote emergency stop during navigation.
+- Resume Command: Say __"resume"__ to resume cart navigation after it has been stopped.
+
 # Installation & Running
 `npm install`
+`npm install regenerator-runtime`
+`npm install fuse.js`
 `npm run dev`

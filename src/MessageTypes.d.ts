@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as ROSLIB from "roslib";
 
 declare interface VehicleState extends ROSLIB.Message {
@@ -13,7 +12,9 @@ declare interface PoseWithCovarianceStamped extends ROSLIB.Message {
     stamp: { secs: number; nsecs: number };
     frame_id: string;
   };
-  pose: ROSLIB.Pose;
+  pose: {
+    pose: ROSLIB.Pose;
+  };
 }
 
 declare interface Header {
