@@ -15,7 +15,7 @@ import {
 import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
 import locations from "./locations.json";
-import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTypes";
+import { PoseWithCovarianceStamped, VehicleState } from "./MessageTypes";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
@@ -23,9 +23,20 @@ import { Button, Flex, Modal, Tour, TourProps, ConfigProvider, message } from "a
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
-import VoiceCommands from "./VoiceRecognition"; 
+import VoiceCommands from "./VoiceRecognition";
 import { useTTS } from './useTTS';
 import { vehicleService } from "./services/vehicleService";
+
+function LineString(coordinates: Position[]): GeoJSON {
+    return {
+        type: "Feature",
+        geometry: {
+            type: "LineString",
+            coordinates: coordinates,
+        },
+        properties: {}
+    };
+}
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -163,19 +174,19 @@ export default function CartView() {
 
     const ros = new ROSLIB.Ros({
         url: "http://localhost:5173/" // Replace with your ROS WebSocket URL if different
-      });
-      
-      ros.on("connection", () => {
+    });
+
+    ros.on("connection", () => {
         console.log("Connected to ROS");
-      });
-      
-      ros.on("error", (error) => {
+    });
+
+    ros.on("error", (error) => {
         console.log("Error connecting to ROS: ", error);
-      });
-      
-      ros.on("close", () => {
+    });
+
+    ros.on("close", () => {
         console.log("Connection to ROS closed");
-      });
+    });
 
     const stop_topic = new ROSLIB.Topic({
         ros: ros,
@@ -215,7 +226,7 @@ export default function CartView() {
         setSelectedLocation(location);
         setIsConfirmationModalOpen(true);
         setCurrentLocation(null); // Clear current location when selecting a new one
-        speak(`Confirm to go to ${location.name}`);  
+        speak(`Confirm to go to ${location.name}`);
     };
 
     const handleConfirmation = () => {
@@ -235,14 +246,14 @@ export default function CartView() {
 
     const stopCart = () => {
         console.log("Initiating smooth stop...");
-        
+
         // Publish zero velocity for smooth stop
         const stopMsg = new ROSLIB.Message({
             vel: 0.0,
             angle: 0.0
         });
         nav_cmd.publish(stopMsg);
-        
+
         // Update vehicle state - ensure we maintain reached_destination state
         const stateMsg = new ROSLIB.Message({
             is_navigating: false,
@@ -250,21 +261,21 @@ export default function CartView() {
             stopped: true,
         });
         vehicle_state.publish(stateMsg);
-        
+
         // Use functional update to ensure we get latest state
         setState(prev => ({
             ...prev,
             is_navigating: false,
             stopped: true
         }));
-        
+
         message.success("Cart stopping smoothly...");
         speak("Cart stopping");
     };
 
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
-    
+
         if (command === "STOP") {
             console.log("STOP command recognized");
             if (state.is_navigating && !state.stopped) {
@@ -283,7 +294,7 @@ export default function CartView() {
                 // Publish false to manual control topic to disable emergency stop
                 const resumeMsg = new ROSLIB.Message({ data: false });
                 stop_topic.publish(resumeMsg);
-                
+
                 // Also publish to vehicle_state with stopped: false
                 const stateMsg = new ROSLIB.Message({
                     is_navigating: true,
@@ -291,7 +302,7 @@ export default function CartView() {
                     stopped: false,
                 });
                 vehicle_state.publish(stateMsg);
-                
+
                 setState((prevState) => ({ ...prevState, stopped: false, is_navigating: true }));
                 message.success("Cart resumed.");
                 speak("Cart resuming navigation");
@@ -371,6 +382,35 @@ export default function CartView() {
         vehicleService.registerCart("James");
     };
 
+
+    useEffect(() => {
+        const callback = (message: ROSLIB.Message) => {
+            if (map.current == undefined) return;
+
+            const newState = message as VehicleState;
+            const prevState = state;
+            setState(newState);
+
+            if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
+                speak(`Arrived at ${currentLocation}`);
+                setState(prev => ({ ...prev, is_navigating: false }));
+            }
+
+            if (newState.reached_destination) {
+                const source = map.current.getSource("remaining_path") as GeoJSONSource;
+                source.setData(LineString([]));
+            }
+        };
+
+        // Subscribe and store the subscription ID
+        vehicle_state.subscribe(callback);
+
+        return () => {
+            // Unsubscribe using the callback reference
+            vehicle_state.unsubscribe(callback);
+        };
+    }, [speak, currentLocation, state.is_navigating]);
+
     useEffect(() => {
         if (mapRef.current == undefined) return;
 
@@ -406,16 +446,6 @@ export default function CartView() {
 
             const image = await map.current.loadImage("osgeo-logo.png");
             map.current.addImage("custom-marker", image.data);
-            function LineString(coordinates: Position[]): GeoJSON {
-                return {
-                    type: "Feature",
-                    geometry: {
-                        type: "LineString",
-                        coordinates: coordinates,
-                    },
-                    properties: {}
-                };
-            }
             map.current.addSource("limited_pose", {
                 type: "geojson",
                 data: point(-78.869914, 38.435491),
@@ -536,7 +566,7 @@ export default function CartView() {
             // Dynamically populate Destinations list with data from locations.json
             locations.forEach((location: { lat: number, long: number, name: string, displayName: string }, index) => {
                 if (map.current == undefined) return;
-            
+
                 const popup = new Popup({
                     anchor: 'bottom',
                     className: 'location-popup',
@@ -545,49 +575,22 @@ export default function CartView() {
                     closeOnMove: false,
                 })
                     .setText(location.displayName)
-            
+
                 const marker = new Marker({ color: PIN_COLORS[index] })
                     .setLngLat([location.long, location.lat])
                     .setPopup(popup)
                     .addTo(map.current);
-            
+
                 marker.togglePopup();
                 marker.getElement().addEventListener('click', (e) => {
                     e.stopPropagation();
                     console.log('Marker clicked:', location.displayName);
                     handleLocationSelect(location);
                 });
-            
+
                 locationPins.push(marker);
             });
 
-            useEffect(() => {
-                const callback = (message: ROSLIB.Message) => {
-                    if (map.current == undefined) return;
-                
-                    const newState = message as VehicleState;
-                    const prevState = state;
-                    setState(newState);
-                    
-                    if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
-                        speak(`Arrived at ${currentLocation}`);
-                        setState(prev => ({ ...prev, is_navigating: false }));
-                    }
-                
-                    if (newState.reached_destination) {
-                        const source = map.current.getSource("remaining_path") as GeoJSONSource;
-                        source.setData(LineString([]));
-                    }
-                };
-
-                // Subscribe and store the subscription ID
-                vehicle_state.subscribe(callback);
-
-                return () => {
-                    // Unsubscribe using the callback reference
-                    vehicle_state.unsubscribe(callback);
-                };
-            }, [speak, currentLocation, state.is_navigating]);
 
             limited_pose.subscribe(function (message: ROSLIB.Message) {
                 if (map.current == undefined) return;
@@ -645,9 +648,9 @@ export default function CartView() {
                     <ul id="destinations">
                         {locations.map((location, index) => (
                             <li
-                                className={clsx('destination-item', { 
-                                    selected: currentLocation === location.displayName || 
-                                            (selectedLocation?.displayName === location.displayName && isConfirmationModalOpen)
+                                className={clsx('destination-item', {
+                                    selected: currentLocation === location.displayName ||
+                                        (selectedLocation?.displayName === location.displayName && isConfirmationModalOpen)
                                 })}
                                 role='button'
                                 key={location.name}
@@ -682,29 +685,29 @@ export default function CartView() {
                     ></div>
                     <Flex id="map-buttons" gap='middle'>
                         {state.is_navigating ? (
-                            <Button 
-                                id="emergency-stop" 
-                                type="primary" 
-                                size="large" 
-                                icon={<FaStopCircle />} 
-                                ref={ref4} 
+                            <Button
+                                id="emergency-stop"
+                                type="primary"
+                                size="large"
+                                icon={<FaStopCircle />}
+                                ref={ref4}
                                 danger
                                 onClick={stopCart}
                             >
                                 Press for Emergency Stop
                             </Button>
                         ) : state.stopped ? (
-                            <Button 
-                                id="resume-trip" 
-                                type="primary" 
-                                size="large" 
+                            <Button
+                                id="resume-trip"
+                                type="primary"
+                                size="large"
                                 icon={<FaPlayCircle />}
                                 onClick={() => handleCommand("RESUME")}
                             >
                                 Press to Resume Trip
                             </Button>
                         ) : null}
-                        
+
                         <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
                             Press to Request Help
                         </Button>
@@ -802,7 +805,7 @@ export default function CartView() {
             {/* Ant Design Tour */}
             <Tour
                 open={isNewUser}
-                onClose={() => { setIsNewUser(false); setState({...state, stopped: true}); setState({...state, is_navigating: false}) }}
+                onClose={() => { setIsNewUser(false); setState({ ...state, stopped: true }); setState({ ...state, is_navigating: false }) }}
                 steps={steps}
             />
 

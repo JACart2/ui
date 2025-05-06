@@ -24,7 +24,7 @@ export default function DevMenu({ vehicleState, setVehicleState, registerCart, i
             ...data
         });
     }
-  
+
     const handleVoiceChange = (voiceName: string) => {
         const voice = voices.find(v => v.name === voiceName);
         if (voice) {
@@ -68,11 +68,11 @@ export default function DevMenu({ vehicleState, setVehicleState, registerCart, i
                     <Switch checked={vehicleState.reached_destination} onChange={(checked) => editState({ reached_destination: checked })} />
                     <span>reached_destination</span>
                 </div>
-                <div className="label-input"
+                <div className="label-input">
                     <Switch checked={vehicleState.stopped} onChange={(checked) => editState({ stopped: checked })} />
                     <span>stopped</span>
                 </div>
-                  
+
                 <h3>User State</h3>
                 <div className="label-input">
                     <Switch checked={isNewUser} onChange={(checked) => { closeDrawer(); setIsNewUser(checked); editState({ is_navigating: checked }) }} />
@@ -96,7 +96,7 @@ export default function DevMenu({ vehicleState, setVehicleState, registerCart, i
                                     }))}
                             />
                         </div>
-                        <Button 
+                        <Button
                             style={{ marginBottom: '16px' }}
                             onClick={handleTestVoice}
                             disabled={!selectedVoice}

@@ -12,7 +12,9 @@ declare interface PoseWithCovarianceStamped extends ROSLIB.Message {
     stamp: { secs: number; nsecs: number };
     frame_id: string;
   };
-  pose: ROSLIB.Pose;
+  pose: {
+    pose: ROSLIB.Pose;
+  };
 }
 
 declare interface Header {
