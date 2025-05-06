@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button, Drawer, Switch, Select, message } from "antd";
+import { Button, Drawer, Input, Switch, Select, message } from "antd";
 import { useState } from "react";
 import { FaCode } from "react-icons/fa6";
 import { useTTS } from '../useTTS';
 import './DevMenu.css'
+import { vehicleService } from "../services/vehicleService";
 
-export default function DevMenu({ vehicleState, setVehicleState, isNewUser, setIsNewUser }: any) {
+export default function DevMenu({ vehicleState, setVehicleState, registerCart, isNewUser, setIsNewUser }: any) {
     const [open, setOpen] = useState(false);
     const { voices, selectedVoice, setSelectedVoice, testVoice } = useTTS();
 
@@ -23,7 +24,7 @@ export default function DevMenu({ vehicleState, setVehicleState, isNewUser, setI
             ...data
         });
     }
-
+  
     const handleVoiceChange = (voiceName: string) => {
         const voice = voices.find(v => v.name === voiceName);
         if (voice) {
@@ -39,6 +40,11 @@ export default function DevMenu({ vehicleState, setVehicleState, isNewUser, setI
             message.warning("No voice selected");
         }
     };
+
+    function updateServerIP(ip: string) {
+        vehicleService.setServerIP(ip);
+        registerCart();
+    }
 
     return (
         <>
@@ -62,11 +68,11 @@ export default function DevMenu({ vehicleState, setVehicleState, isNewUser, setI
                     <Switch checked={vehicleState.reached_destination} onChange={(checked) => editState({ reached_destination: checked })} />
                     <span>reached_destination</span>
                 </div>
-                <div className="label-input">
+                <div className="label-input"
                     <Switch checked={vehicleState.stopped} onChange={(checked) => editState({ stopped: checked })} />
                     <span>stopped</span>
                 </div>
-
+                  
                 <h3>User State</h3>
                 <div className="label-input">
                     <Switch checked={isNewUser} onChange={(checked) => { closeDrawer(); setIsNewUser(checked); editState({ is_navigating: checked }) }} />
@@ -99,6 +105,11 @@ export default function DevMenu({ vehicleState, setVehicleState, isNewUser, setI
                         </Button>
                     </>
                 )}
+
+                <div className="label-input">
+                    <Input onChange={(e) => updateServerIP(e.target.value)}></Input>
+                    <span>Server IP</span>
+                </div>
             </Drawer>
         </>
     );

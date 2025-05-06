@@ -10,7 +10,9 @@ import {
     vehicle_state,
     visual_path,
     limited_pose,
+    left_image
 } from "./topics";
+import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
 import locations from "./locations.json";
 import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTypes";
@@ -23,6 +25,7 @@ import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
 import VoiceCommands from "./VoiceRecognition"; 
 import { useTTS } from './useTTS';
+import { vehicleService } from "./services/vehicleService";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -363,8 +366,15 @@ export default function CartView() {
         }
     }
 
+    const registerCart = () => {
+        console.log("About to register...")
+        vehicleService.registerCart("James");
+    };
+
     useEffect(() => {
         if (mapRef.current == undefined) return;
+
+        registerCart();
 
         const protocol = new Protocol();
         maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -465,11 +475,63 @@ export default function CartView() {
             visual_path.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
 
-                const markers = message as ROSMarker[];
-                visual_path_coordinates = markers.map((m) => rosToMapCoords(m.pose.position));
+                const markers = message as ROSMarkerList;
+                console.log("visual_path Message:")
+                console.log(message)
+                visual_path_coordinates = markers.markers.map((m) => rosToMapCoords(m.pose.position));
                 const source = map.current.getSource("visual_path") as GeoJSONSource;
                 source.setData(LineString(visual_path_coordinates));
             });
+
+            left_image.subscribe((message: ROSLIB.Message) => {
+                // console.log(message)
+                handle_image_data(message);
+            });
+
+            function handle_image_data(message: ROSLIB.Message) {
+                const image = message as Image;
+                const d = image.data;
+
+                const binaryData = atob(d); // Decode Base64 string into binary data
+
+                const rawData = new Uint8Array(binaryData.length);
+                for (let i = 0; i < binaryData.length; i++) {
+                    rawData[i] = binaryData.charCodeAt(i);
+                }
+
+                const width = 640;
+                const height = 360;
+                const rgbaData = new Uint8ClampedArray(width * height * 4);
+
+                for (let i = 0; i < rawData.length; i += 4) {
+                    const b = rawData[i];      // Blue
+                    const g = rawData[i + 1];  // Green
+                    const r = rawData[i + 2];  // Red
+                    const a = rawData[i + 3];  // Alpha
+
+                    rgbaData[i] = r;        // Red
+                    rgbaData[i + 1] = g;    // Green
+                    rgbaData[i + 2] = b;    // Blue
+                    rgbaData[i + 3] = a;    // Alpha
+                }
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = width;
+                canvas.height = height;
+                if (ctx) {
+                    const actualImageData = ctx.createImageData(width, height);
+                    actualImageData.data.set(rgbaData);
+                    ctx.putImageData(actualImageData, 0, 0);
+                    const base64Image = canvas.toDataURL("image/png");
+
+                    const img = document.getElementById("camera-image") as HTMLImageElement;
+                    img.src = base64Image
+                    img.width = image.width
+                    img.height = image.height
+                }
+
+            }
 
             // Dynamically populate Destinations list with data from locations.json
             locations.forEach((location: { lat: number, long: number, name: string, displayName: string }, index) => {
@@ -531,7 +593,7 @@ export default function CartView() {
                 if (map.current == undefined) return;
 
                 const poseWithCovariance = message as PoseWithCovarianceStamped;
-                const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.position);
+                const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.pose.position);
                 const source = map.current.getSource("limited_pose") as GeoJSONSource;
                 source.setData(point(x1, y1));
 
@@ -578,6 +640,7 @@ export default function CartView() {
         >
             <div id="split">
                 <div id="sidebar">
+                    <img id="camera-image"></img>
                     <h2>Destinations</h2>
                     <ul id="destinations">
                         {locations.map((location, index) => (
@@ -744,8 +807,7 @@ export default function CartView() {
             />
 
             {process.env.NODE_ENV === 'development' &&
-                <DevMenu vehicleState={state} setVehicleState={setState}
-                    isNewUser={isNewUser} setIsNewUser={setIsNewUser}></DevMenu>
+                <DevMenu vehicleState={state} setVehicleState={setState} registerCart={registerCart} isNewUser={isNewUser} setIsNewUser={setIsNewUser}></DevMenu>
             }
         </ConfigProvider>
     );

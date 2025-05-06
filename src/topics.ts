@@ -26,3 +26,20 @@ export const clicked_point = new ROSLIB.Topic({
   name: "/clicked_point",
   messageType: "geometry_msgs/msg/PointStamped",
 });
+
+export const right_video = new ROSLIB.Topic({
+  ros: ros,
+  name: "right_image",
+  messageType: "sensor_msgs/msg/Image"
+
+});
+
+export const left_image = new ROSLIB.Topic({
+  ros: ros,
+  name: "/zed/zed_node/rgb/image_rect_color",
+  messageType: "sensor_msgs/msg/Image",
+  throttle_rate: 150
+});
+
+
+ros.on("connection", () => {console.log("connected")})
