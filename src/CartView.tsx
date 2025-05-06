@@ -10,7 +10,9 @@ import {
     vehicle_state,
     visual_path,
     limited_pose,
+    left_image
 } from "./topics";
+import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
 import locations from "./locations.json";
 import { PoseWithCovarianceStamped, ROSMarker, VehicleState } from "./MessageTypes";
@@ -18,9 +20,10 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import TripInfoCard from "./ui/TripInfoCard";
 import { Button, Flex, Modal } from "antd"; // Import Modal from Ant Design
-import { FaStop } from "react-icons/fa6";
-import { FaStopCircle } from "react-icons/fa";
-import { IoCall, IoWarning } from "react-icons/io5";
+import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
+import { IoCall } from "react-icons/io5";
+import DevMenu from "./ui/DevMenu";
+import { vehicleService } from "./services/vehicleService";
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -30,6 +33,12 @@ export default function CartView() {
     const [currentLink, setCurrentLink] = useState<string | null>(null); // State to track the current link
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // State for confirmation modal
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string } | null>(null); // State to store the selected location for confirmation
+
+    const [state, setState] = useState<VehicleState>({
+        is_navigating: false,
+        reached_destination: true,
+        stopped: false,
+    });
 
     const PIN_COLORS = [
         'red',
@@ -70,8 +79,7 @@ export default function CartView() {
 
     const handleConfirmation = () => {
         if (selectedLocation) {
-            navigateTo(selectedLocation.lat, selectedLocation.long); // Navigate to the selected location
-            setCurrentLocation(selectedLocation.name); // Set the current location
+            navigateToLocation(selectedLocation)
         }
         setIsConfirmationModalOpen(false); // Close the confirmation modal
     };
@@ -98,14 +106,15 @@ export default function CartView() {
         }
     }
 
-    let state: VehicleState = {
-        is_navigating: false,
-        reached_destination: true,
-        stopped: false,
+    const registerCart = () => {
+        console.log("About to register...")
+        vehicleService.registerCart("James");
     };
 
     useEffect(() => {
         if (mapRef.current == undefined) return;
+
+        registerCart();
 
         const protocol = new Protocol();
         maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -206,11 +215,63 @@ export default function CartView() {
             visual_path.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
 
-                const markers = message as ROSMarker[];
-                visual_path_coordinates = markers.map((m) => rosToMapCoords(m.pose.position));
+                const markers = message as ROSMarkerList;
+                console.log("visual_path Message:")
+                console.log(message)
+                visual_path_coordinates = markers.markers.map((m) => rosToMapCoords(m.pose.position));
                 const source = map.current.getSource("visual_path") as GeoJSONSource;
                 source.setData(LineString(visual_path_coordinates));
             });
+
+            left_image.subscribe((message: ROSLIB.Message) => {
+                // console.log(message)
+                handle_image_data(message);
+            });
+
+            function handle_image_data(message: ROSLIB.Message) {
+                const image = message as Image;
+                const d = image.data;
+
+                const binaryData = atob(d); // Decode Base64 string into binary data
+
+                const rawData = new Uint8Array(binaryData.length);
+                for (let i = 0; i < binaryData.length; i++) {
+                    rawData[i] = binaryData.charCodeAt(i);
+                }
+
+                const width = 640;
+                const height = 360;
+                const rgbaData = new Uint8ClampedArray(width * height * 4);
+
+                for (let i = 0; i < rawData.length; i += 4) {
+                    const b = rawData[i];      // Blue
+                    const g = rawData[i + 1];  // Green
+                    const r = rawData[i + 2];  // Red
+                    const a = rawData[i + 3];  // Alpha
+
+                    rgbaData[i] = r;        // Red
+                    rgbaData[i + 1] = g;    // Green
+                    rgbaData[i + 2] = b;    // Blue
+                    rgbaData[i + 3] = a;    // Alpha
+                }
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = width;
+                canvas.height = height;
+                if (ctx) {
+                    const actualImageData = ctx.createImageData(width, height);
+                    actualImageData.data.set(rgbaData);
+                    ctx.putImageData(actualImageData, 0, 0);
+                    const base64Image = canvas.toDataURL("image/png");
+
+                    const img = document.getElementById("camera-image") as HTMLImageElement;
+                    img.src = base64Image
+                    img.width = image.width
+                    img.height = image.height
+                }
+
+            }
 
             // Dynamically populate Destinations list with data from locations.json
             locations.forEach((location: { lat: number, long: number, name: string }, index) => {
@@ -243,7 +304,7 @@ export default function CartView() {
             vehicle_state.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
 
-                state = message as VehicleState;
+                setState(message as VehicleState);
                 console.log("Recieved vehicle state message:")
                 console.log(message);
                 if (state.reached_destination) {
@@ -256,7 +317,7 @@ export default function CartView() {
                 if (map.current == undefined) return;
 
                 const poseWithCovariance = message as PoseWithCovarianceStamped;
-                const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.position);
+                const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.pose.position);
                 const source = map.current.getSource("limited_pose") as GeoJSONSource;
                 source.setData(point(x1, y1));
 
@@ -297,6 +358,7 @@ export default function CartView() {
         <>
             <div id="split">
                 <div id="sidebar">
+                    <img id="camera-image"></img>
                     <h2>Destinations</h2>
                     <ul id="destinations">
                         {locations.map((location) => (
@@ -316,9 +378,26 @@ export default function CartView() {
                     <div ref={mapRef} id="map"></div>
                     <Flex id="map-buttons" gap='middle'>
                         { /* TODO: Only show emergency stop button when cart is navigating */}
-                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
-                            Press for Emergency Stop
-                        </Button>
+
+                        {state.is_navigating &&
+                            <>
+                                {
+                                    state.stopped ?
+
+                                        <Button id="resume-trip" type="primary" size="large" icon={<FaPlayCircle />}>
+                                            Press to Resume Trip
+                                        </Button>
+
+                                        :
+
+                                        <Button id="emergency-stop" type="primary" size="large" icon={<FaStopCircle />} danger>
+                                            Press for Emergency Stop
+                                        </Button>
+                                }
+
+                            </>
+                        }
+
                         <Button id="request-help" type="primary" size="large" icon={<IoCall />}>
                             Press to Request Help
                         </Button>
@@ -328,7 +407,7 @@ export default function CartView() {
 
             {/* Ant Design Modal For Additional Location Infrormation */}
             <Modal
-                title={<span className="modal-title">Learn More</span>}
+                title="Learn More"
                 open={isModalOpen}
                 onOk={handleOk}
                 onCancel={handleCancel}
@@ -338,23 +417,25 @@ export default function CartView() {
                             Back
                         </Button>
                     ),
-                    <Button key="close" type="primary" className="modal-close-button" onClick={handleCancel}>
+                    <Button key="close" type="primary" danger onClick={handleCancel}>
                         Close
                     </Button>
                 ]}
-                width={currentLink ? "85%" : "40%"} 
-                className="custom-modal"
-                closable={false} 
-                style={{ top: '10%' }}
-                bodyStyle={{ 
-                    padding: 0, 
-                    backgroundColor: 'var(--jmu-gold)', 
-                    height: currentLink ? '75vh' : 'auto', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    justifyContent: 'center', 
-                    alignItems: 'flex-start', 
-                    textAlign: 'left', 
+                width={currentLink ? "85%" : "40%"}
+                className="custom-modal learn-more-modal"
+                closable={false}
+                style={{ top: '8px' }}
+                styles={{
+                    body: {
+                        padding: 0,
+                        backgroundColor: 'var(--jmu-gold)',
+                        height: currentLink ? 'calc(80vh)' : 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'flex-start',
+                        textAlign: 'left',
+                    }
                 }}
             >
                 {currentLink ? (
@@ -365,39 +446,28 @@ export default function CartView() {
                     />
                 ) : (
                     <ul className="modal-link-list">
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/592720?s/Fest")}>
-                            Festival Conference & Student Center
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/623291?s/P.O")}>
-                            P.O.D. in EnGeo
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576622?s/Ches")}>
-                            Chesapeake Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!ct/0?m/576605?s/")}>
-                            King Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!bm/?ct/0?m/623302?s/Paul")}>
-                            Paul Jennings Hall
-                        </li>
-                        <li className="modal-link-item" onClick={() => handleLinkClick("https://map.jmu.edu/?id=1869#!bm/?ct/0?m/622822?s/E-hall")}>
-                            E-Hall
-                        </li>
+                        {locations.map(location => {
+                            if (location.url) return (
+                                <li className="modal-link-item" onClick={() => handleLinkClick(location.url)}>
+                                    {location.name}
+                                </li>
+                            )
+                        })}
                     </ul>
                 )}
             </Modal>
 
             {/* Confirmation Modal */}
             <Modal
-                title={<span className="modal-title">Are You Sure?</span>}
+                title="Are You Sure?"
                 open={isConfirmationModalOpen}
                 onOk={handleConfirmation}
                 onCancel={handleConfirmationCancel}
                 footer={[
-                    <Button key="cancel" type="default" onClick={handleConfirmationCancel}>
+                    <Button key="cancel" type="default" danger onClick={handleConfirmationCancel}>
                         Cancel
                     </Button>,
-                    <Button key="confirm" type="primary" className="modal-close-button" onClick={handleConfirmation}>
+                    <Button key="confirm" type="primary" onClick={handleConfirmation}>
                         Confirm
                     </Button>
                 ]}
@@ -405,20 +475,26 @@ export default function CartView() {
                 className="custom-modal"
                 closable={false}
                 style={{ top: '30%' }}
-                bodyStyle={{ 
-                    padding: '24px', // Add padding to the body
-                    backgroundColor: 'var(--jmu-gold)', 
-                    height: 'auto', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', // Center content horizontally
-                    textAlign: 'center', // Center text
-                    fontSize: '1.2rem', // Increase font size
+                styles={{
+                    body: {
+                        padding: '24px', // Add padding to the body
+                        backgroundColor: 'var(--jmu-gold)',
+                        height: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center', // Center content horizontally
+                        textAlign: 'center', // Center text
+                        fontSize: '1.2rem', // Increase font size
+                    }
                 }}
             >
                 <p>Are you sure you want to navigate to {selectedLocation?.name}?</p>
             </Modal>
+
+            {process.env.NODE_ENV === 'development' &&
+                <DevMenu vehicleState={state} setVehicleState={setState} registerCart={registerCart}></DevMenu>
+            }
         </>
     );
 }
