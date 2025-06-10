@@ -95,7 +95,7 @@ export default function CartView() {
     const steps: TourProps['steps'] = [
         {
             title: 'Select a Destination',
-            description: 'Here are the selectable destinations. Click one and then select Confirm for the cart to begin navigating.',
+            description: 'Here are the selectable destinations. Click one or use the voice command "James go to [location name]" in order to select a destination. Then select Confirm or say "James Confirm" for the cart to begin navigating.',
             target: () => ref1.current,
             style: tourPopupStyles,
             nextButtonProps: {
@@ -245,32 +245,35 @@ export default function CartView() {
     };
 
     const stopCart = () => {
-        console.log("Initiating smooth stop...");
+        console.log("Initiating immediate stop...");
 
-        // Publish zero velocity for smooth stop
+        // Publish zero velocity and angle for complete stop (like 'x' key in teleop)
         const stopMsg = new ROSLIB.Message({
             vel: 0.0,
             angle: 0.0
         });
         nav_cmd.publish(stopMsg);
 
-        // Update vehicle state - ensure we maintain reached_destination state
+        // Also publish to manual control topic to ensure stop
+        const manualStopMsg = new ROSLIB.Message({ data: true });
+        stop_topic.publish(manualStopMsg);
+
+        // Update vehicle state
         const stateMsg = new ROSLIB.Message({
             is_navigating: false,
-            reached_destination: state.reached_destination, // Preserve this value
+            reached_destination: state.reached_destination,
             stopped: true,
         });
         vehicle_state.publish(stateMsg);
 
-        // Use functional update to ensure we get latest state
         setState(prev => ({
             ...prev,
             is_navigating: false,
             stopped: true
         }));
 
-        message.success("Cart stopping smoothly...");
-        speak("Cart stopping");
+        message.success("Cart stopped immediately");
+        speak("Cart stopped");
     };
 
     const handleCommand = (command: string) => {
@@ -278,11 +281,7 @@ export default function CartView() {
 
         if (command === "STOP") {
             console.log("STOP command recognized");
-            if (state.is_navigating && !state.stopped) {
-                stopCart();
-            } else {
-                console.log("Cart is not navigating or already stopped.");
-            }
+            stopCart();
         } else if (command === "HELP") {
             console.log("HELP command recognized");
             message.info("Help requested.");

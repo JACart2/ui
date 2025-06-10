@@ -28,12 +28,28 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
             {
                 command: "James *",
                 callback: (spokenCommand: string) => {
-                    console.log("Cart command recognized:", spokenCommand);
-                    const commandParts = spokenCommand.trim().toLowerCase().split(' ');
-                    const mainCommand = commandParts[0];
-                    const additionalText = commandParts.slice(1).join(' ');
+                    console.log("Raw command received:", spokenCommand);
+                    
+                    // Process the command (already trimmed by the recognizer)
+                    const processedCommand = spokenCommand.toLowerCase();
+                    const words = processedCommand.split(/\s+/);
+                    
+                    // Ignore if more than 4 words (since "James" is already stripped)
+                    if (words.length > 4) {
+                        console.log("Command too long, ignoring");
+                        resetTranscript();
+                        return;
+                    }
 
-                    // Fuzzy match the command
+                    // Handle multi-word commands first
+                    if (processedCommand.startsWith("go to ")) {
+                        const locationName = processedCommand.substring(6); // Get text after "go to "
+                        handleGoToCommand(locationName);
+                        resetTranscript();
+                        return;
+                    }
+
+                    // Handle other commands
                     const commandFuse = new Fuse(commandList, {
                         keys: ['name'],
                         threshold: 0.6,
@@ -41,64 +57,80 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                         minMatchCharLength: 2
                     });
 
-                    const commandResults = commandFuse.search(mainCommand);
+                    const commandResults = commandFuse.search(processedCommand);
                     
                     if (commandResults.length > 0) {
                         const matchedCommand = commandResults[0].item;
-                        
-                        if (matchedCommand.name === "go to") {
-                            // Handle location navigation
-                            const locationName = additionalText;
-                            const locationFuse = new Fuse(locations, {
-                                keys: ['name'],
-                                threshold: 0.6,
-                                includeScore: true,
-                                ignoreLocation: true,
-                                shouldSort: true,
-                                findAllMatches: true,
-                                minMatchCharLength: 3,
-                                getFn: (obj, path) => {
-                                    const value = Fuse.config.getFn(obj, path);
-                                    return typeof value === 'string' ? value.toLowerCase() : value;
-                                },
-                            });
-
-                            const locationResults = locationFuse.search(locationName);
-                            if (locationResults.length > 0) {
-                                const matchedLocation = locationResults[0].item.name;
-                                onCommand(`${matchedCommand.action} ${matchedLocation}`);
-                            } else {
-                                console.log(`Location "${additionalText}" not found.`);
-                                message.warning(`Location "${additionalText}" not found.`);
-                            }
-                        } else {
-                            // Handle other commands
-                            onCommand(matchedCommand.action);
-                        }
+                        onCommand(matchedCommand.action);
                     } else {
-                        console.log(`Command "${mainCommand}" not recognized.`);
-                        message.warning(`Command "${mainCommand}" not recognized.`);
+                        console.log(`Command "${processedCommand}" not recognized.`);
+                        message.warning(`Command "${processedCommand}" not recognized.`);
                     }
+                    
+                    resetTranscript();
                 },
             },
         ],
     });
 
+    const handleGoToCommand = (locationName: string) => {
+        const locationFuse = new Fuse(locations, {
+            keys: ['name'],
+            threshold: 0.6,
+            includeScore: true,
+            ignoreLocation: true,
+            shouldSort: true,
+            findAllMatches: true,
+            minMatchCharLength: 3,
+            getFn: (obj, path) => {
+                const value = Fuse.config.getFn(obj, path);
+                return typeof value === 'string' ? value.toLowerCase() : value;
+            },
+        });
+
+        const locationResults = locationFuse.search(locationName);
+        if (locationResults.length > 0) {
+            const matchedLocation = locationResults[0].item.name;
+            onCommand(`GO TO ${matchedLocation}`);
+        } else {
+            console.log(`Location "${locationName}" not found.`);
+            message.warning(`Location "${locationName}" not found.`);
+        }
+    };
+
     // Start listening when the component mounts
     useEffect(() => {
         if (browserSupportsSpeechRecognition) {
             console.log("Starting speech recognition...");
-            SpeechRecognition.startListening({ continuous: true });
+            SpeechRecognition.startListening({ 
+                continuous: true,
+                language: 'en-US'
+            });
         } else {
             console.log("Your browser does not support speech recognition.");
             message.warning("Your browser does not support speech recognition.");
         }
     }, [browserSupportsSpeechRecognition]);
 
-    // Handle recognized commands with a delay
+    // Aggressively reset transcript when it doesn't start with "James"
     useEffect(() => {
         if (transcript) {
-            console.log("Raw transcript:", transcript);
+            const trimmedTranscript = transcript.trim().toLowerCase();
+            
+            // If the transcript doesn't start with "james", reset it immediately
+            if (!trimmedTranscript.startsWith('james')) {
+                resetTranscript();
+                return;
+            }
+
+            // If the transcript is too long, reset it
+            const wordCount = trimmedTranscript.split(/\s+/).length;
+            if (wordCount > 5) {
+                resetTranscript();
+                return;
+            }
+
+            // Regular timeout cleanup
             const delay = 700;
             const timeoutId = setTimeout(() => {
                 resetTranscript();
@@ -112,7 +144,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         <div>
             {listening && (
                 <div style={{ color: 'red', textAlign: 'center', marginTop: '10px' }}>
-                    🔴 Listening...
+                    🔴 Listening for Voice Commands...
                 </div>
             )}
             {!browserSupportsSpeechRecognition && (
