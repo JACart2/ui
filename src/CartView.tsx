@@ -758,7 +758,7 @@ export default function CartView() {
                         {locations.map(location => {
                             if (location.url) return (
                                 <li className="modal-link-item" onClick={() => handleLinkClick(location.url)}>
-                                    {location.name}
+                                    {location.displayName}
                                 </li>
                             )
                         })}
