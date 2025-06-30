@@ -172,6 +172,8 @@ export default function CartView() {
         zIndexPopup: 1070,
     };
 
+    const [isTutorialPromptOpen, setIsTutorialPromptOpen] = useState(true); // Set to true to show on launch
+
     const ros = new ROSLIB.Ros({
         url: "http://localhost:5173/" // Replace with your ROS WebSocket URL if different
     });
@@ -811,6 +813,49 @@ export default function CartView() {
             {process.env.NODE_ENV === 'development' &&
                 <DevMenu vehicleState={state} setVehicleState={setState} registerCart={registerCart} isNewUser={isNewUser} setIsNewUser={setIsNewUser}></DevMenu>
             }
+
+            {/* New User Tutorial Prompt Modal */}
+            <Modal
+                title="Welcome to the JACart"
+                open={isTutorialPromptOpen}
+                onOk={() => {
+                    setIsTutorialPromptOpen(false);
+                    setIsNewUser(true);
+                    setState(prev => ({ ...prev, is_navigating: true }));
+                }}
+                onCancel={() => setIsTutorialPromptOpen(false)}
+                footer={[
+                    <Button key="cancel" type="default" danger onClick={() => setIsTutorialPromptOpen(false)}>
+                        No Thanks
+                    </Button>,
+                    <Button key="confirm" type="primary" onClick={() => {
+                        setIsTutorialPromptOpen(false);
+                        setIsNewUser(true);
+                        setState(prev => ({ ...prev, is_navigating: true }));
+                    }}>
+                        Show Tutorial
+                    </Button>
+                ]}
+                width="40%"
+                className="custom-modal"
+                closable={false}
+                style={{ top: '30%' }}
+                styles={{
+                    body: {
+                        padding: '24px',
+                        backgroundColor: 'var(--jmu-gold)',
+                        height: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        fontSize: '1.2rem',
+                    }
+                }}
+            >
+                <p>Are you a new user and would like a tutorial?</p>
+            </Modal>
         </ConfigProvider>
     );
 }
