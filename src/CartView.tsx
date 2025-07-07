@@ -727,7 +727,7 @@ export default function CartView() {
                 width={currentLink ? "85%" : "40%"}
                 className="custom-modal learn-more-modal"
                 closable={false}
-                style={{ top: '8px' }}
+                style={{ top: '50%', transform: 'translateY(-50%)' }}
                 styles={{
                     body: {
                         padding: 0,
