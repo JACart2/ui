@@ -234,8 +234,8 @@ export default function CartView() {
     const handleConfirmation = () => {
         if (selectedLocation) {
             speak(`Now navigating to ${selectedLocation.name}`);
+            setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
             navigateToLocation(selectedLocation);
-            setCurrentLocation(selectedLocation.displayName); // Set the new current location using displayName
         }
         setIsConfirmationModalOpen(false);
     };
@@ -370,12 +370,10 @@ export default function CartView() {
     }
 
     function navigateToLocation(location: { lat: number, long: number, name: string, displayName: string }) {
-        if (!state.is_navigating) {
-            console.log("Navigating to: " + location.displayName);
-            setState(prev => ({ ...prev, is_navigating: true }));
-            setCurrentLocation(location.displayName);
-            navigateTo(location.lat, location.long);
-        }
+        console.log("Navigating to: " + location.displayName);
+        setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
+        setCurrentLocation(location.displayName);
+        navigateTo(location.lat, location.long);
     }
 
     const registerCart = () => {
@@ -389,12 +387,11 @@ export default function CartView() {
             if (map.current == undefined) return;
 
             const newState = message as VehicleState;
-            const prevState = state;
             setState(newState);
 
-            if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
+            if (newState.reached_destination && currentLocation) {
                 speak(`Arrived at ${currentLocation}`);
-                setState(prev => ({ ...prev, is_navigating: false }));
+                setCurrentLocation(null); // Clear current location when destination is reached
             }
 
             if (newState.reached_destination) {
@@ -403,14 +400,9 @@ export default function CartView() {
             }
         };
 
-        // Subscribe and store the subscription ID
         vehicle_state.subscribe(callback);
-
-        return () => {
-            // Unsubscribe using the callback reference
-            vehicle_state.unsubscribe(callback);
-        };
-    }, [speak, currentLocation, state.is_navigating]);
+        return () => vehicle_state.unsubscribe(callback);
+    }, [speak, currentLocation]);
 
     useEffect(() => {
         if (mapRef.current == undefined) return;
