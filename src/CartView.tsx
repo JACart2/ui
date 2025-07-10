@@ -38,7 +38,6 @@ function LineString(coordinates: Position[]): GeoJSON {
     };
 }
 
-// TODO: Keep track of vehicle state (maybe in vehicleService) instead of keeping states for each key in the model
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -175,10 +174,11 @@ export default function CartView() {
         zIndexPopup: 1070,
     };
 
+    // User tutorial Modal that launches on startup
     const [isTutorialPromptOpen, setIsTutorialPromptOpen] = useState(true); // Set to true to show on launch
 
     const ros = new ROSLIB.Ros({
-        url: "http://localhost:5173/" // Replace with your ROS WebSocket URL if different
+        url: "http://localhost:9090/" // Replace with your ROS WebSocket URL if different
     });
 
     ros.on("connection", () => {
