@@ -1,8 +1,16 @@
 import * as ROSLIB from "roslib";
+
+// ROS Connection
 const ros = new ROSLIB.Ros({
   url: "ws://localhost:9090",
 });
 
+// Event Listeners
+ros.on("connection", () => console.log("Connected to ROS"));
+ros.on("error", (error) => console.log("ROS connection error:", error));
+ros.on("close", () => console.log("ROS connection closed"));
+
+// Topics
 export const visual_path = new ROSLIB.Topic({
   ros: ros,
   name: "/visual_path",
@@ -31,7 +39,6 @@ export const right_video = new ROSLIB.Topic({
   ros: ros,
   name: "right_image",
   messageType: "sensor_msgs/msg/Image"
-
 });
 
 export const left_image = new ROSLIB.Topic({
@@ -41,5 +48,17 @@ export const left_image = new ROSLIB.Topic({
   throttle_rate: 150
 });
 
+export const stop_topic = new ROSLIB.Topic({
+  ros: ros,
+  name: "/set_manual_control",
+  messageType: "std_msgs/Bool"
+});
 
-ros.on("connection", () => {console.log("connected")})
+export const nav_cmd = new ROSLIB.Topic({
+  ros: ros,
+  name: "/nav_cmd",
+  messageType: "motor_control_interface/msg/VelAngle"
+});
+
+// Optional: Export the ros instance if needed elsewhere
+export { ros };

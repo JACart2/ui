@@ -10,7 +10,9 @@ import {
     vehicle_state,
     visual_path,
     limited_pose,
-    left_image
+    left_image,
+    stop_topic,
+    nav_cmd
 } from "./topics";
 import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
@@ -38,7 +40,6 @@ function LineString(coordinates: Position[]): GeoJSON {
     };
 }
 
-// TODO: Keep track of vehicle state (maybe in vehicleService) instead of keeping states for each key in the model
 
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
@@ -175,35 +176,8 @@ export default function CartView() {
         zIndexPopup: 1070,
     };
 
+    // User tutorial Modal that launches on startup
     const [isTutorialPromptOpen, setIsTutorialPromptOpen] = useState(true); // Set to true to show on launch
-
-    const ros = new ROSLIB.Ros({
-        url: "http://localhost:5173/" // Replace with your ROS WebSocket URL if different
-    });
-
-    ros.on("connection", () => {
-        console.log("Connected to ROS");
-    });
-
-    ros.on("error", (error) => {
-        console.log("Error connecting to ROS: ", error);
-    });
-
-    ros.on("close", () => {
-        console.log("Connection to ROS closed");
-    });
-
-    const stop_topic = new ROSLIB.Topic({
-        ros: ros,
-        name: "/set_manual_control",
-        messageType: "std_msgs/Bool"
-    });
-
-    const nav_cmd = new ROSLIB.Topic({
-        ros: ros,
-        name: "/nav_cmd",
-        messageType: "motor_control_interface/msg/VelAngle"
-    });
 
     const showModal = () => {
         setIsModalOpen(true);
@@ -252,14 +226,14 @@ export default function CartView() {
     const stopCart = () => {
         console.log("Initiating immediate stop...");
 
-        // Publish zero velocity and angle for complete stop (like 'x' key in teleop)
+        // Publish zero velocity and angle for complete stop
         const stopMsg = new ROSLIB.Message({
             vel: 0.0,
             angle: 0.0
         });
         nav_cmd.publish(stopMsg);
 
-        // Also publish to manual control topic to ensure stop
+        // Publish to manual control topic to ensure stop
         const manualStopMsg = new ROSLIB.Message({ data: true });
         stop_topic.publish(manualStopMsg);
 
@@ -275,11 +249,11 @@ export default function CartView() {
             ...prev,
             is_navigating: false,
             stopped: true
-        }));
+    }));
 
-        message.success("Cart stopped immediately");
-        speak("Cart stopped");
-    };
+    message.success("Cart stopped immediately");
+    speak("Cart stopped");
+};
 
     const requestHelp = () => {
         vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
