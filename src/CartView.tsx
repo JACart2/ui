@@ -38,6 +38,8 @@ function LineString(coordinates: Position[]): GeoJSON {
     };
 }
 
+// TODO: Keep track of vehicle state (maybe in vehicleService) instead of keeping states for each key in the model
+
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
     const mapRef = useRef(null);
@@ -47,6 +49,7 @@ export default function CartView() {
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string, displayName: string } | null>(null);
     const [isNewUser, setIsNewUser] = useState(false);
+    const [helpRequested, setHelpRequested] = useState(false);
     const { speak } = useTTS();
 
     const [state, setState] = useState<VehicleState>({
@@ -277,6 +280,10 @@ export default function CartView() {
         message.success("Cart stopped immediately");
         speak("Cart stopped");
     };
+
+    const requestHelp = () => {
+        vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
+    }
 
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
@@ -701,8 +708,8 @@ export default function CartView() {
                             </Button>
                         ) : null}
 
-                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
-                            Press to Request Help
+                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5} onClick={() => requestHelp()}>
+                            {helpRequested ? "Help Requested" : "Press to Request Help"}
                         </Button>
                     </Flex>
                 </div>
