@@ -148,7 +148,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                 </div>
             )}
             {!browserSupportsSpeechRecognition && (
-                <p>Your browser does not support speech recognition.</p>
+                <p>Your browser does not support speech recognition(use Chrome).</p>
             )}
         </div>
     );

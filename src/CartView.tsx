@@ -10,7 +10,9 @@ import {
     vehicle_state,
     visual_path,
     limited_pose,
-    left_image
+    left_image,
+    stop_topic,
+    nav_cmd
 } from "./topics";
 import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
@@ -38,6 +40,7 @@ function LineString(coordinates: Position[]): GeoJSON {
     };
 }
 
+
 export default function CartView() {
     const map = useRef<maplibregl.Map | null>(null);
     const mapRef = useRef(null);
@@ -47,6 +50,7 @@ export default function CartView() {
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string, displayName: string } | null>(null);
     const [isNewUser, setIsNewUser] = useState(false);
+    const [helpRequested, setHelpRequested] = useState(false);
     const { speak } = useTTS();
 
     const [state, setState] = useState<VehicleState>({
@@ -172,33 +176,8 @@ export default function CartView() {
         zIndexPopup: 1070,
     };
 
-    const ros = new ROSLIB.Ros({
-        url: "http://localhost:5173/" // Replace with your ROS WebSocket URL if different
-    });
-
-    ros.on("connection", () => {
-        console.log("Connected to ROS");
-    });
-
-    ros.on("error", (error) => {
-        console.log("Error connecting to ROS: ", error);
-    });
-
-    ros.on("close", () => {
-        console.log("Connection to ROS closed");
-    });
-
-    const stop_topic = new ROSLIB.Topic({
-        ros: ros,
-        name: "/set_manual_control",
-        messageType: "std_msgs/Bool"
-    });
-
-    const nav_cmd = new ROSLIB.Topic({
-        ros: ros,
-        name: "/nav_cmd",
-        messageType: "motor_control_interface/msg/VelAngle"
-    });
+    // User tutorial Modal that launches on startup
+    const [isTutorialPromptOpen, setIsTutorialPromptOpen] = useState(true); // Set to true to show on launch
 
     const showModal = () => {
         setIsModalOpen(true);
@@ -232,8 +211,8 @@ export default function CartView() {
     const handleConfirmation = () => {
         if (selectedLocation) {
             speak(`Now navigating to ${selectedLocation.name}`);
+            setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
             navigateToLocation(selectedLocation);
-            setCurrentLocation(selectedLocation.displayName); // Set the new current location using displayName
         }
         setIsConfirmationModalOpen(false);
     };
@@ -247,14 +226,14 @@ export default function CartView() {
     const stopCart = () => {
         console.log("Initiating immediate stop...");
 
-        // Publish zero velocity and angle for complete stop (like 'x' key in teleop)
+        // Publish zero velocity and angle for complete stop
         const stopMsg = new ROSLIB.Message({
             vel: 0.0,
             angle: 0.0
         });
         nav_cmd.publish(stopMsg);
 
-        // Also publish to manual control topic to ensure stop
+        // Publish to manual control topic to ensure stop
         const manualStopMsg = new ROSLIB.Message({ data: true });
         stop_topic.publish(manualStopMsg);
 
@@ -270,11 +249,15 @@ export default function CartView() {
             ...prev,
             is_navigating: false,
             stopped: true
-        }));
+    }));
 
-        message.success("Cart stopped immediately");
-        speak("Cart stopped");
-    };
+    message.success("Cart stopped immediately");
+    speak("Cart stopped");
+};
+
+    const requestHelp = () => {
+        vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
+    }
 
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
@@ -368,12 +351,10 @@ export default function CartView() {
     }
 
     function navigateToLocation(location: { lat: number, long: number, name: string, displayName: string }) {
-        if (!state.is_navigating) {
-            console.log("Navigating to: " + location.displayName);
-            setState(prev => ({ ...prev, is_navigating: true }));
-            setCurrentLocation(location.displayName);
-            navigateTo(location.lat, location.long);
-        }
+        console.log("Navigating to: " + location.displayName);
+        setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
+        setCurrentLocation(location.displayName);
+        navigateTo(location.lat, location.long);
     }
 
     const registerCart = () => {
@@ -387,12 +368,11 @@ export default function CartView() {
             if (map.current == undefined) return;
 
             const newState = message as VehicleState;
-            const prevState = state;
             setState(newState);
 
-            if (newState.reached_destination && !prevState.reached_destination && currentLocation) {
+            if (newState.reached_destination && currentLocation) {
                 speak(`Arrived at ${currentLocation}`);
-                setState(prev => ({ ...prev, is_navigating: false }));
+                setCurrentLocation(null); // Clear current location when destination is reached
             }
 
             if (newState.reached_destination) {
@@ -401,14 +381,9 @@ export default function CartView() {
             }
         };
 
-        // Subscribe and store the subscription ID
         vehicle_state.subscribe(callback);
-
-        return () => {
-            // Unsubscribe using the callback reference
-            vehicle_state.unsubscribe(callback);
-        };
-    }, [speak, currentLocation, state.is_navigating]);
+        return () => vehicle_state.unsubscribe(callback);
+    }, [speak, currentLocation]);
 
     useEffect(() => {
         if (mapRef.current == undefined) return;
@@ -707,8 +682,8 @@ export default function CartView() {
                             </Button>
                         ) : null}
 
-                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5}>
-                            Press to Request Help
+                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5} onClick={() => requestHelp()}>
+                            {helpRequested ? "Help Requested" : "Press to Request Help"}
                         </Button>
                     </Flex>
                 </div>
@@ -733,7 +708,7 @@ export default function CartView() {
                 width={currentLink ? "85%" : "40%"}
                 className="custom-modal learn-more-modal"
                 closable={false}
-                style={{ top: '8px' }}
+                style={{ top: '50%', transform: 'translateY(-50%)' }}
                 styles={{
                     body: {
                         padding: 0,
@@ -811,6 +786,49 @@ export default function CartView() {
             {process.env.NODE_ENV === 'development' &&
                 <DevMenu vehicleState={state} setVehicleState={setState} registerCart={registerCart} isNewUser={isNewUser} setIsNewUser={setIsNewUser}></DevMenu>
             }
+
+            {/* New User Tutorial Prompt Modal */}
+            <Modal
+                title="Welcome to the JACart"
+                open={isTutorialPromptOpen}
+                onOk={() => {
+                    setIsTutorialPromptOpen(false);
+                    setIsNewUser(true);
+                    setState(prev => ({ ...prev, is_navigating: true }));
+                }}
+                onCancel={() => setIsTutorialPromptOpen(false)}
+                footer={[
+                    <Button key="cancel" type="default" danger onClick={() => setIsTutorialPromptOpen(false)}>
+                        No Thanks
+                    </Button>,
+                    <Button key="confirm" type="primary" onClick={() => {
+                        setIsTutorialPromptOpen(false);
+                        setIsNewUser(true);
+                        setState(prev => ({ ...prev, is_navigating: true }));
+                    }}>
+                        Show Tutorial
+                    </Button>
+                ]}
+                width="40%"
+                className="custom-modal"
+                closable={false}
+                style={{ top: '30%' }}
+                styles={{
+                    body: {
+                        padding: '24px',
+                        backgroundColor: 'var(--jmu-gold)',
+                        height: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        fontSize: '1.2rem',
+                    }
+                }}
+            >
+                <p>Are you a new user and would like a tutorial?</p>
+            </Modal>
         </ConfigProvider>
     );
 }
