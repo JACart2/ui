@@ -5,10 +5,7 @@ const ros = new ROSLIB.Ros({
   url: "ws://localhost:9090",
 });
 
-// Event Listeners
 ros.on("connection", () => console.log("Connected to ROS"));
-ros.on("error", (error) => console.log("ROS connection error:", error));
-ros.on("close", () => console.log("ROS connection closed"));
 
 // Topics
 export const visual_path = new ROSLIB.Topic({
@@ -60,5 +57,9 @@ export const nav_cmd = new ROSLIB.Topic({
   messageType: "motor_control_interface/msg/VelAngle"
 });
 
-// Optional: Export the ros instance if needed elsewhere
-export { ros };
+// Add direct brake command topic
+export const brake_cmd = new ROSLIB.Topic({
+  ros: ros,
+  name: "/direct_brake",
+  messageType: "std_msgs/UInt8"
+});

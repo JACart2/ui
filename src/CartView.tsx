@@ -12,7 +12,8 @@ import {
     limited_pose,
     left_image,
     stop_topic,
-    nav_cmd
+    nav_cmd,
+    brake_cmd
 } from "./topics";
 import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
@@ -223,41 +224,49 @@ export default function CartView() {
         speak("Navigation cancelled");
     };
 
-    const stopCart = () => {
-        console.log("Initiating immediate stop...");
-
-        // Publish zero velocity and angle for complete stop
-        const stopMsg = new ROSLIB.Message({
-            vel: 0.0,
-            angle: 0.0
-        });
-        nav_cmd.publish(stopMsg);
-
-        // Publish to manual control topic to ensure stop
-        const manualStopMsg = new ROSLIB.Message({ data: false });
-        stop_topic.publish(manualStopMsg);
-
-        // Debug output
-        console.log("Published nav_cmd:", stopMsg);
-        console.log("Published set_manual_control:", manualStopMsg);
-        
-        // Update vehicle state
-        const stateMsg = new ROSLIB.Message({
-            is_navigating: false,
-            reached_destination: state.reached_destination,
-            stopped: true,
-        });
-        vehicle_state.publish(stateMsg);
-
-        setState(prev => ({
-            ...prev,
-            is_navigating: false,
-            stopped: true
-    }));
-
-    message.success("Cart stopped immediately");
-    speak("Cart stopped");
-};
+    const stopCart = async () => {
+        console.log("Initiating proper braking sequence...");
+    
+        try {
+            // 1. First send negative velocity to trigger obstacle braking
+            const brakeMsg = new ROSLIB.Message({
+                vel: -1.0,  // Negative indicates emergency stop
+                angle: 0.0
+            });
+            nav_cmd.publish(brakeMsg);
+    
+            // 2. Ensure we're in autonomous mode (manual_control = false)
+            const manualStopMsg = new ROSLIB.Message({ data: false });
+            stop_topic.publish(manualStopMsg);
+    
+            // 3. Send direct brake command (255 = max brake pressure)
+            const directBrakeMsg = new ROSLIB.Message({ data: 255 });
+            brake_cmd.publish(directBrakeMsg);
+    
+            // 4. Update vehicle state
+            const stateMsg = new ROSLIB.Message({
+                is_navigating: false,
+                reached_destination: true,
+                stopped: true,
+            });
+            vehicle_state.publish(stateMsg);
+    
+            // 5. Update local state
+            setState(prev => ({
+                ...prev,
+                is_navigating: false,
+                stopped: true
+            }));
+    
+            message.success("Emergency brakes applied");
+            speak("Emergency stop activated");
+            
+        } catch (error) {
+            console.error("Error during emergency stop:", error);
+            message.error("Failed to activate emergency stop");
+            speak("Stop failed");
+        }
+    };
 
     const requestHelp = () => {
         vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
