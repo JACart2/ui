@@ -234,9 +234,13 @@ export default function CartView() {
         nav_cmd.publish(stopMsg);
 
         // Publish to manual control topic to ensure stop
-        const manualStopMsg = new ROSLIB.Message({ data: true });
+        const manualStopMsg = new ROSLIB.Message({ data: false });
         stop_topic.publish(manualStopMsg);
 
+        // Debug output
+        console.log("Published nav_cmd:", stopMsg);
+        console.log("Published set_manual_control:", manualStopMsg);
+        
         // Update vehicle state
         const stateMsg = new ROSLIB.Message({
             is_navigating: false,
