@@ -34,8 +34,8 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                     const processedCommand = spokenCommand.toLowerCase();
                     const words = processedCommand.split(/\s+/);
                     
-                    // Ignore if more than 4 words (since "James" is already stripped)
-                    if (words.length > 4) {
+                    // Ignore if more than 5 words (since "James" is already stripped)
+                    if (words.length > 5) {
                         console.log("Command too long, ignoring");
                         resetTranscript();
                         return;
@@ -100,16 +100,42 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
 
     // Start listening when the component mounts
     useEffect(() => {
-        if (browserSupportsSpeechRecognition) {
+        const setupMicrophone = async () => {
+            try {
+            // Configure microphone with noise suppression
+            await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                noiseSuppression: true,
+                echoCancellation: true,
+                autoGainControl: true 
+                },
+                video: false
+            });
+            console.log("Microphone configured with noise suppression");
+            } catch (error) {
+            console.error("Error configuring microphone:", error);
+            }
+        };
+
+        const startListening = () => {
+            if (browserSupportsSpeechRecognition) {
             console.log("Starting speech recognition...");
             SpeechRecognition.startListening({ 
                 continuous: true,
                 language: 'en-US'
             });
-        } else {
+            } else {
             console.log("Your browser does not support speech recognition.");
             message.warning("Your browser does not support speech recognition.");
-        }
+            }
+        };
+
+        // First configure microphone, then start listening
+        setupMicrophone().then(startListening);
+
+        return () => {
+            SpeechRecognition.stopListening();
+        };
     }, [browserSupportsSpeechRecognition]);
 
     // Aggressively reset transcript when it doesn't start with "James"

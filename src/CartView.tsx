@@ -21,7 +21,7 @@ import locations from "./locations.json";
 import { PoseWithCovarianceStamped, VehicleState } from "./MessageTypes";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import TripInfoCard from "./ui/TripInfoCard";
+import { useSpeechRecognition } from 'react-speech-recognition';
 import { Button, Flex, Modal, Tour, TourProps, ConfigProvider, message } from "antd";
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
@@ -178,6 +178,24 @@ export default function CartView() {
         zIndexPopup: 1070,
     };
 
+    
+    const { 
+        transcript, 
+        listening, 
+        resetTranscript 
+    } = useSpeechRecognition();
+
+    // Clear transcript after command processing
+    useEffect(() => {
+    if (transcript) {
+        const timer = setTimeout(() => {
+            resetTranscript();
+        }, 3000); // Clear after 3 seconds of inactivity
+        
+        return () => clearTimeout(timer);
+    }
+    }, [transcript, resetTranscript]);
+
     // User tutorial Modal that launches on startup
     const [isTutorialPromptOpen, setIsTutorialPromptOpen] = useState(true); // Set to true to show on launch
 
@@ -264,6 +282,7 @@ export default function CartView() {
 
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
+        resetTranscript();
 
         if (command === "STOP") {
             console.log("STOP command recognized");
@@ -663,11 +682,54 @@ export default function CartView() {
                         ))}
                     </ul>
                     <VoiceCommands onCommand={handleCommand} locations={locations} />
-                    <div id='trip-info-container'>
-                        <TripInfoCard name="My Cart" speed={6} tripProgress={50} />
+                    <div id='voice-transcript-container'>
+                    <div 
+                        style={{
+                        backgroundColor: '#f0f0f0',
+                        padding: '15px',
+                        borderRadius: '8px',
+                        minHeight: '80px',
+                        border: '1px solid #d9d9d9',
+                        marginBottom: '15px'
+                        }}
+                    >
+                        <h3 style={{ marginBottom: '10px' }}>Voice Command Transcript</h3>
+                        <div 
+                        style={{
+                            minHeight: '40px',
+                            padding: '8px',
+                            backgroundColor: '#fff',
+                            borderRadius: '4px',
+                            border: '1px solid #e8e8e8',
+                            textAlign: 'center'
+                        }}
+                        >
+                        {transcript ? (
+                            <>
+                            <strong>Heard:</strong> {transcript}
+                            {listening && (
+                                <div style={{ 
+                                display: 'inline-block',
+                                width: '10px',
+                                height: '10px',
+                                backgroundColor: 'red',
+                                borderRadius: '50%',
+                                marginLeft: '8px',
+                                animation: 'pulse 1s infinite'
+                                }}></div>
+                            )}
+                            </>
+                        ) : (
+                            <span style={{ color: '#999' }}>
+                            {listening ? 'Listening for commands...' : 'Microphone not active'}
+                            </span>
+                        )}
+                        </div>
                     </div>
+                    </div>
+
                     <Button id="info-button" size='large' onClick={showModal} ref={ref3}>
-                        Additional Location Information
+                    Additional Location Information
                     </Button>
                 </div>
 
