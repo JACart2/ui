@@ -53,6 +53,7 @@ export default function CartView() {
     const [isNewUser, setIsNewUser] = useState(false);
     const [helpRequested, setHelpRequested] = useState(false);
     const { speak } = useTTS();
+    const [brakeInterval, setBrakeInterval] = useState<NodeJS.Timeout | null>(null);
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -224,48 +225,37 @@ export default function CartView() {
         speak("Navigation cancelled");
     };
 
-    const stopCart = async () => {
-        console.log("Initiating proper braking sequence...");
-    
-        try {
-            // 1. First send negative velocity to trigger obstacle braking
-            const brakeMsg = new ROSLIB.Message({
-                vel: -1.0,  // Negative indicates emergency stop
-                angle: 0.0
-            });
-            nav_cmd.publish(brakeMsg);
-    
-            // 2. Ensure we're in autonomous mode (manual_control = false)
-            const manualStopMsg = new ROSLIB.Message({ data: false });
-            stop_topic.publish(manualStopMsg);
-    
-            // 3. Send direct brake command (255 = max brake pressure)
-            const directBrakeMsg = new ROSLIB.Message({ data: 255 });
-            brake_cmd.publish(directBrakeMsg);
-    
-            // 4. Update vehicle state
-            const stateMsg = new ROSLIB.Message({
-                is_navigating: false,
-                reached_destination: true,
-                stopped: true,
-            });
-            vehicle_state.publish(stateMsg);
-    
-            // 5. Update local state
-            setState(prev => ({
-                ...prev,
-                is_navigating: false,
-                stopped: true
-            }));
-    
-            message.success("Emergency brakes applied");
-            speak("Emergency stop activated");
-            
-        } catch (error) {
-            console.error("Error during emergency stop:", error);
-            message.error("Failed to activate emergency stop");
-            speak("Stop failed");
+    const stopCart = () => {
+        console.log("Initiating emergency brake sequence");
+        
+        // Clear any existing interval first
+        if (brakeInterval) {
+            clearInterval(brakeInterval);
         }
+
+        // 1. Send initial brake commands
+        const brakeMsg = new ROSLIB.Message({ vel: -1.0, angle: 0.0 });
+        nav_cmd.publish(brakeMsg);
+        brake_cmd.publish(new ROSLIB.Message({ data: 255 }));
+
+        // 2. Set up repeating brake commands
+        const newInterval = setInterval(() => {
+            nav_cmd.publish(brakeMsg);
+            brake_cmd.publish(new ROSLIB.Message({ data: 255 }));
+        }, 1000); // Resend every second
+
+        // 3. Store the interval ID
+        setBrakeInterval(newInterval);
+
+        // 4. Update state
+        setState(prev => ({
+            ...prev,
+            is_navigating: false,
+            stopped: true
+        }));
+
+        message.success("Emergency brake activated");
+        speak("Emergency stop engaged");
     };
 
     const requestHelp = () => {
@@ -280,17 +270,28 @@ export default function CartView() {
             stopCart();
         } else if (command === "HELP") {
             console.log("HELP command recognized");
+            requestHelp();
             message.info("Help requested.");
             speak("Help requested");
         } else if (command === "RESUME") {
             console.log("RESUME command recognized");
             if (state.stopped) {
                 console.log("Resuming the cart...");
-                // Publish false to manual control topic to disable emergency stop
+                
+                // 1. Clear the braking interval
+                if (brakeInterval) {
+                    clearInterval(brakeInterval);
+                    setBrakeInterval(null);
+                }
+
+                // 2. Send resume commands
                 const resumeMsg = new ROSLIB.Message({ data: false });
                 stop_topic.publish(resumeMsg);
 
-                // Also publish to vehicle_state with stopped: false
+                // 3. Reset brake command
+                brake_cmd.publish(new ROSLIB.Message({ data: 0 }));
+
+                // 4. Update state
                 const stateMsg = new ROSLIB.Message({
                     is_navigating: true,
                     reached_destination: false,
@@ -298,9 +299,14 @@ export default function CartView() {
                 });
                 vehicle_state.publish(stateMsg);
 
-                setState((prevState) => ({ ...prevState, stopped: false, is_navigating: true }));
-                message.success("Cart resumed.");
-                speak("Cart resuming navigation");
+                setState(prev => ({ 
+                    ...prev, 
+                    stopped: false, 
+                    is_navigating: true 
+                }));
+                
+                message.success("Cart resumed");
+                speak("Resuming navigation");
             } else {
                 console.log("Cart is not stopped.");
             }
@@ -352,6 +358,14 @@ export default function CartView() {
             setState(prev => ({ ...prev }));
         }
     }, []);
+
+    useEffect(() => {
+    return () => {
+        if (brakeInterval) {
+            clearInterval(brakeInterval);
+        }
+    };
+}, [brakeInterval]);
 
 
     function navigateTo(lat: number, lng: number) {
