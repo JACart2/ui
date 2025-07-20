@@ -309,6 +309,11 @@ export default function CartView() {
                 const resumeMsg = new ROSLIB.Message({ data: false });
                 stop_topic.publish(resumeMsg);
 
+                // Re-publish last navigation command to restart movement
+                if (selectedLocation) {
+                navigateToLocation(selectedLocation);
+                }
+
                 // Also publish to vehicle_state with stopped: false
                 const stateMsg = new ROSLIB.Message({
                     is_navigating: true,
