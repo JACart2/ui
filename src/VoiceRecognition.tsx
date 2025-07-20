@@ -100,16 +100,42 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
 
     // Start listening when the component mounts
     useEffect(() => {
-        if (browserSupportsSpeechRecognition) {
+        const setupMicrophone = async () => {
+            try {
+            // Configure microphone with noise suppression
+            await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                noiseSuppression: true,
+                echoCancellation: true,
+                autoGainControl: true 
+                },
+                video: false
+            });
+            console.log("Microphone configured with noise suppression");
+            } catch (error) {
+            console.error("Error configuring microphone:", error);
+            }
+        };
+
+        const startListening = () => {
+            if (browserSupportsSpeechRecognition) {
             console.log("Starting speech recognition...");
             SpeechRecognition.startListening({ 
                 continuous: true,
                 language: 'en-US'
             });
-        } else {
+            } else {
             console.log("Your browser does not support speech recognition.");
             message.warning("Your browser does not support speech recognition.");
-        }
+            }
+        };
+
+        // First configure microphone, then start listening
+        setupMicrophone().then(startListening);
+
+        return () => {
+            SpeechRecognition.stopListening();
+        };
     }, [browserSupportsSpeechRecognition]);
 
     // Aggressively reset transcript when it doesn't start with "James"
