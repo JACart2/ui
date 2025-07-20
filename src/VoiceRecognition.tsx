@@ -34,8 +34,8 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                     const processedCommand = spokenCommand.toLowerCase();
                     const words = processedCommand.split(/\s+/);
                     
-                    // Ignore if more than 4 words (since "James" is already stripped)
-                    if (words.length > 4) {
+                    // Ignore if more than 5 words (since "James" is already stripped)
+                    if (words.length > 5) {
                         console.log("Command too long, ignoring");
                         resetTranscript();
                         return;
