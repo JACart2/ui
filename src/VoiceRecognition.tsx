@@ -14,7 +14,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         { name: "help", action: "HELP" },
         { name: "resume", action: "RESUME" },
         { name: "go to", action: "GO TO" },
-        { name: "confirm", action: "CONFIRM" }, 
+        { name: "confirm", action: "CONFIRM" },
         { name: "cancel", action: "CANCEL" },
     ];
 
@@ -29,7 +29,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                 command: "James *",
                 callback: (spokenCommand: string) => {
                     console.log("Raw command received:", spokenCommand);
-                    
+
                     // Process the command (already trimmed by the recognizer)
                     const processedCommand = spokenCommand.toLowerCase();
                     const words = processedCommand.split(/\s+/);
@@ -58,7 +58,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                     });
 
                     const commandResults = commandFuse.search(processedCommand);
-                    
+
                     if (commandResults.length > 0) {
                         const matchedCommand = commandResults[0].item;
                         onCommand(matchedCommand.action);
@@ -66,7 +66,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                         console.log(`Command "${processedCommand}" not recognized.`);
                         message.warning(`Command "${processedCommand}" not recognized.`);
                     }
-                    
+
                     resetTranscript();
                 },
             },
@@ -120,7 +120,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         const startListening = () => {
             if (browserSupportsSpeechRecognition) {
             console.log("Starting speech recognition...");
-            SpeechRecognition.startListening({ 
+            SpeechRecognition.startListening({
                 continuous: true,
                 language: 'en-US'
             });
@@ -142,7 +142,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     useEffect(() => {
         if (transcript) {
             const trimmedTranscript = transcript.trim().toLowerCase();
-            
+
             // If the transcript doesn't start with "james", reset it immediately
             if (!trimmedTranscript.startsWith('james')) {
                 resetTranscript();
@@ -174,7 +174,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
                 </div>
             )}
             {!browserSupportsSpeechRecognition && (
-                <p>Your browser does not support speech recognition(use Chrome).</p>
+                <p>Your browser does not support speech recognition (use a Chromium-based browser).</p>
             )}
         </div>
     );
