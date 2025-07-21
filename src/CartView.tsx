@@ -53,6 +53,7 @@ export default function CartView() {
     const [isNewUser, setIsNewUser] = useState(false);
     const [helpRequested, setHelpRequested] = useState(false);
     const { speak } = useTTS();
+    const stopIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -244,23 +245,38 @@ export default function CartView() {
 
     const stopCart = async () => {
         console.log("Initiating proper braking sequence...");
-    
+
         try {
-            // 1. First send negative velocity to trigger obstacle braking
-            const brakeMsg = new ROSLIB.Message({
-                vel: -1.0,  // Negative indicates emergency stop
-                angle: 0.0
-            });
-            nav_cmd.publish(brakeMsg);
-    
-            // 2. Ensure we're in autonomous mode (manual_control = false)
-            const manualStopMsg = new ROSLIB.Message({ data: false });
-            stop_topic.publish(manualStopMsg);
-    
-            // 3. Send direct brake command (255 = max brake pressure)
-            const directBrakeMsg = new ROSLIB.Message({ data: 255 });
-            brake_cmd.publish(directBrakeMsg);
-    
+            // Clear any existing interval
+            if (stopIntervalRef.current) {
+                clearInterval(stopIntervalRef.current);
+                stopIntervalRef.current = null;
+            }
+
+            // Immediate stop commands
+            const sendStopCommands = () => {
+                // 1. Send negative velocity to trigger obstacle braking
+                const brakeMsg = new ROSLIB.Message({
+                    vel: -1.0,  // Negative indicates emergency stop
+                    angle: 0.0
+                });
+                nav_cmd.publish(brakeMsg);
+
+                // 2. Ensure we're in autonomous mode (manual_control = false)
+                const manualStopMsg = new ROSLIB.Message({ data: false });
+                stop_topic.publish(manualStopMsg);
+
+                // 3. Send direct brake command (255 = max brake pressure)
+                const directBrakeMsg = new ROSLIB.Message({ data: 255 });
+                brake_cmd.publish(directBrakeMsg);
+            };
+
+            // Send immediately
+            sendStopCommands();
+
+            // Set up interval to send every 500ms (adjust frequency as needed)
+            stopIntervalRef.current = setInterval(sendStopCommands, 500);
+
             // 4. Update vehicle state
             const stateMsg = new ROSLIB.Message({
                 is_navigating: false,
@@ -268,14 +284,14 @@ export default function CartView() {
                 stopped: true,
             });
             vehicle_state.publish(stateMsg);
-    
+
             // 5. Update local state
             setState(prev => ({
                 ...prev,
                 is_navigating: false,
                 stopped: true
             }));
-    
+
             message.success("Emergency brakes applied");
             speak("Emergency stop activated");
             
@@ -305,8 +321,15 @@ export default function CartView() {
             console.log("RESUME command recognized");
             if (state.stopped) {
                 console.log("Resuming the cart...");
+                
+                // Clear the stop interval if it exists
+                if (stopIntervalRef.current) {
+                    clearInterval(stopIntervalRef.current);
+                    stopIntervalRef.current = null;
+                }
+                    
                 // Publish false to manual control topic to disable emergency stop
-                const resumeMsg = new ROSLIB.Message({ data: false });
+                const resumeMsg = new ROSLIB.Message({ data: false });    
                 stop_topic.publish(resumeMsg);
 
                 // Also publish to vehicle_state with stopped: false
@@ -370,6 +393,15 @@ export default function CartView() {
             // Force a state update to ensure TTS works
             setState(prev => ({ ...prev }));
         }
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            // Clean up interval on unmount
+            if (stopIntervalRef.current) {
+                clearInterval(stopIntervalRef.current);
+            }
+        };
     }, []);
 
 
