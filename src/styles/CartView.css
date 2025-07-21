@@ -11,6 +11,7 @@
     flex-direction: column;
     /* gap: 8px; */
     box-shadow: inset 0 0 12px #00000040;
+    max-width: max(300px, min(30vw, 800px));
 }
 
 #trip-info-container {
@@ -64,7 +65,7 @@ h2 {
 
 #destinations {
     flex: 1;
-    width: 20rem;
+    /* width: 20rem; */
     list-style-type: none;
     padding: 0;
     margin: 0;
