@@ -255,6 +255,7 @@ export default function CartView() {
 
             // Immediate stop commands
             const sendStopCommands = () => {
+                console.log("Sending Break messages");
                 // 1. Send negative velocity to trigger obstacle braking
                 const brakeMsg = new ROSLIB.Message({
                     vel: -1.0,  // Negative indicates emergency stop
@@ -275,7 +276,7 @@ export default function CartView() {
             sendStopCommands();
 
             // Set up interval to send every 500ms (adjust frequency as needed)
-            stopIntervalRef.current = setInterval(sendStopCommands, 500);
+            stopIntervalRef.current = setInterval(sendStopCommands, 2500);
 
             // 4. Update vehicle state
             const stateMsg = new ROSLIB.Message({
@@ -403,7 +404,6 @@ export default function CartView() {
             }
         };
     }, []);
-
 
     function navigateTo(lat: number, lng: number) {
         console.log(`Target Coordinates: ${lat}, ${lng}`);
