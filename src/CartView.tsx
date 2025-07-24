@@ -177,22 +177,22 @@ export default function CartView() {
         zIndexPopup: 1070,
     };
 
-    
-    const { 
-        transcript, 
-        listening, 
-        resetTranscript 
+
+    const {
+        transcript,
+        listening,
+        resetTranscript
     } = useSpeechRecognition();
 
     // Clear transcript after command processing
     useEffect(() => {
-    if (transcript) {
-        const timer = setTimeout(() => {
-            resetTranscript();
-        }, 3000); // Clear after 3 seconds of inactivity
-        
-        return () => clearTimeout(timer);
-    }
+        if (transcript) {
+            const timer = setTimeout(() => {
+                resetTranscript();
+            }, 3000); // Clear after 3 seconds of inactivity
+
+            return () => clearTimeout(timer);
+        }
     }, [transcript, resetTranscript]);
 
     // User tutorial Modal that launches on startup
@@ -220,7 +220,9 @@ export default function CartView() {
         setCurrentLink(null);
     };
 
-    const handleLocationSelect = (location: { lat: number, long: number, name: string, displayName: string }) => {
+    const handleLocationSelect = (location: { lat: number, long: number, name: string, displayName: string, disabled?: boolean }) => {
+        if (location?.disabled) return;
+
         setSelectedLocation(location);
         setIsConfirmationModalOpen(true);
         setCurrentLocation(null); // Clear current location when selecting a new one
@@ -244,7 +246,7 @@ export default function CartView() {
 
     const stopCart = async () => {
         console.log("Initiating proper braking sequence...");
-    
+
         try {
             // 1. First send negative velocity to trigger obstacle braking
             const brakeMsg = new ROSLIB.Message({
@@ -252,15 +254,15 @@ export default function CartView() {
                 angle: 0.0
             });
             nav_cmd.publish(brakeMsg);
-    
+
             // 2. Ensure we're in autonomous mode (manual_control = false)
             const manualStopMsg = new ROSLIB.Message({ data: false });
             stop_topic.publish(manualStopMsg);
-    
+
             // 3. Send direct brake command (255 = max brake pressure)
             const directBrakeMsg = new ROSLIB.Message({ data: 255 });
             brake_cmd.publish(directBrakeMsg);
-    
+
             // 4. Update vehicle state
             const stateMsg = new ROSLIB.Message({
                 is_navigating: false,
@@ -268,17 +270,17 @@ export default function CartView() {
                 stopped: true,
             });
             vehicle_state.publish(stateMsg);
-    
+
             // 5. Update local state
             setState(prev => ({
                 ...prev,
                 is_navigating: false,
                 stopped: true
             }));
-    
+
             message.success("Emergency brakes applied");
             speak("Emergency stop activated");
-            
+
         } catch (error) {
             console.error("Error during emergency stop:", error);
             message.error("Failed to activate emergency stop");
@@ -655,6 +657,7 @@ export default function CartView() {
                         {locations.map((location, index) => (
                             <li
                                 className={clsx('destination-item', {
+                                    disabled: location?.disabled,
                                     selected: currentLocation === location.displayName ||
                                         (selectedLocation?.displayName === location.displayName && isConfirmationModalOpen)
                                 })}
@@ -669,53 +672,53 @@ export default function CartView() {
                     </ul>
                     <VoiceCommands onCommand={handleCommand} locations={locations} />
                     <div id='voice-transcript-container'>
-                    <div 
-                        style={{
-                        backgroundColor: '#f0f0f0',
-                        padding: '15px',
-                        borderRadius: '8px',
-                        minHeight: '80px',
-                        border: '1px solid #d9d9d9',
-                        marginBottom: '15px'
-                        }}
-                    >
-                        <h3 style={{ marginBottom: '10px' }}>Voice Command Transcript</h3>
-                        <div 
-                        style={{
-                            minHeight: '40px',
-                            padding: '8px',
-                            backgroundColor: '#fff',
-                            borderRadius: '4px',
-                            border: '1px solid #e8e8e8',
-                            textAlign: 'center'
-                        }}
+                        <div
+                            style={{
+                                backgroundColor: '#f0f0f0',
+                                padding: '15px',
+                                borderRadius: '8px',
+                                minHeight: '80px',
+                                border: '1px solid #d9d9d9',
+                                marginBottom: '15px'
+                            }}
                         >
-                        {transcript ? (
-                            <>
-                            <strong>Heard:</strong> {transcript}
-                            {listening && (
-                                <div style={{ 
-                                display: 'inline-block',
-                                width: '10px',
-                                height: '10px',
-                                backgroundColor: 'red',
-                                borderRadius: '50%',
-                                marginLeft: '8px',
-                                animation: 'pulse 1s infinite'
-                                }}></div>
-                            )}
-                            </>
-                        ) : (
-                            <span style={{ color: '#999' }}>
-                            {listening ? 'Listening for commands...' : 'Microphone not active'}
-                            </span>
-                        )}
+                            <h3 style={{ marginBottom: '10px' }}>Voice Command Transcript</h3>
+                            <div
+                                style={{
+                                    minHeight: '40px',
+                                    padding: '8px',
+                                    backgroundColor: '#fff',
+                                    borderRadius: '4px',
+                                    border: '1px solid #e8e8e8',
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {transcript ? (
+                                    <>
+                                        <strong>Heard:</strong> {transcript}
+                                        {listening && (
+                                            <div style={{
+                                                display: 'inline-block',
+                                                width: '10px',
+                                                height: '10px',
+                                                backgroundColor: 'red',
+                                                borderRadius: '50%',
+                                                marginLeft: '8px',
+                                                animation: 'pulse 1s infinite'
+                                            }}></div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span style={{ color: '#999' }}>
+                                        {listening ? 'Listening for commands...' : 'Microphone not active'}
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    </div>
                     </div>
 
                     <Button id="info-button" size='large' onClick={showModal} ref={ref3}>
-                    Additional Location Information
+                        Additional Location Information
                     </Button>
                 </div>
 
