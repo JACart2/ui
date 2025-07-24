@@ -7,7 +7,7 @@
     "url": "https://map.jmu.edu/?id=1869#!m/592720"
   },
   {
-    "name": "pod", 
+    "name": "pod",
     "displayName": "P.O.D in Engeo",
     "lat": 38.433928,
     "long": -78.862181,
@@ -25,20 +25,23 @@
     "displayName": "King Hall",
     "lat": 38.434257,
     "long": -78.864156,
-    "url": "https://map.jmu.edu/?id=1869#!m/576605"
+    "url": "https://map.jmu.edu/?id=1869#!m/576605",
+    "disabled": true
   },
   {
     "name": "paul jennings hall",
     "displayName": "Paul Jennings Hall",
     "lat": 38.430546,
     "long": -78.865645,
-    "url": "https://map.jmu.edu/?id=1869#!m/593002"
+    "url": "https://map.jmu.edu/?id=1869#!m/593002",
+    "disabled": true
   },
   {
     "name": "E-hall",
     "displayName": "E-Hall",
     "lat": 38.431657,
     "long": -78.860881,
-    "url": "https://map.jmu.edu/?id=1869#!m/622822"
+    "url": "https://map.jmu.edu/?id=1869#!m/622822",
+    "disabled": true
   }
 ]
