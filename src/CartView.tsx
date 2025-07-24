@@ -263,7 +263,7 @@ export default function CartView() {
                 });
                 nav_cmd.publish(brakeMsg);
 
-                // 2. Ensure we're in autonomous mode (manual_control = false)
+                // 2. Manual_control = false
                 const manualStopMsg = new ROSLIB.Message({ data: false });
                 stop_topic.publish(manualStopMsg);
 
@@ -275,8 +275,8 @@ export default function CartView() {
             // Send immediately
             sendStopCommands();
 
-            // Set up interval to send every 500ms (adjust frequency as needed)
-            stopIntervalRef.current = setInterval(sendStopCommands, 2500);
+            // Set up interval to send every 1900ms (adjust frequency as needed)
+            stopIntervalRef.current = setInterval(sendStopCommands, 1900);
 
             // 4. Update vehicle state
             const stateMsg = new ROSLIB.Message({
