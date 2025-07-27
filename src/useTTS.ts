@@ -1,10 +1,31 @@
 import { useEffect, useState } from 'react';
 
+/**
+ * A custom React hook for text-to-speech (TTS) functionality.
+ * Provides speech synthesis capabilities with voice selection and basic controls.
+ * 
+ * @returns {Object} An object containing:
+ *   - speak: Function to speak the given text
+ *   - isSupported: Boolean indicating if TTS is supported in the browser
+ *   - voices: Array of available speech synthesis voices
+ *   - selectedVoice: Currently selected voice
+ *   - setSelectedVoice: Function to change the selected voice
+ *   - testVoice: Function to test a voice with sample text
+ * 
+ * @example
+ * const { speak } = useTTS();
+ * speak("Hello, the cart is ready");
+ */
+
 export const useTTS = () => {
     const [isSupported, setIsSupported] = useState(false);
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
+    /**
+     * Effect hook to check for TTS support and load available voices.
+     * Attempts to find a preferred English female voice by default.
+     */
     useEffect(() => {
         const checkSupport = () => {
             const supported = 'speechSynthesis' in window;
@@ -37,6 +58,12 @@ export const useTTS = () => {
         checkSupport();
     }, []);
 
+    /**
+     * Speaks the given text using the selected voice.
+     * Cancels any ongoing speech before starting new one.
+     * 
+     * @param {string} text - The text to be spoken
+     */
     const speak = (text: string) => {
         if (!isSupported || !selectedVoice) {
             console.warn('SpeechSynthesis not supported or no voice selected');
@@ -52,6 +79,13 @@ export const useTTS = () => {
         window.speechSynthesis.speak(utterance);
     };
 
+    /**
+     * Tests a specific voice by speaking sample text.
+     * Useful for voice selection UI.
+     * 
+     * @param {SpeechSynthesisVoice} voice - The voice to test
+     * @param {string} text - The text to speak (defaults to simple test message)
+     */
     const testVoice = (voice: SpeechSynthesisVoice, text: string) => {
         if (!isSupported) return;
         window.speechSynthesis.cancel();

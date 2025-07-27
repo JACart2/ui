@@ -97,7 +97,26 @@ export default function CartView() {
         padding: '20px',
     };
 
-    // Tour steps
+    /**
+     * Defines the steps for the user tutorial tour that introduces the cart's interface.
+     * Each step highlights a different UI element and explains its functionality.
+     * 
+     * Structure:
+     * - title: Short heading for the step
+     * - description: Detailed explanation of the UI element
+     * - target: Reference to the DOM element being highlighted
+     * - style: Custom styling for the tour popup
+     * - Button styling: Consistent purple JMU-themed buttons
+     * 
+     * Tour Steps:
+     * 1. Destination selection - Explains how to choose destinations
+     * 2. Map view - Shows interactive map features
+     * 3. Location information - Details the info button functionality
+     * 4. Emergency stop - Explains the safety stop feature
+     * 5. Help request - Shows how to get assistance
+     * 
+     * The tour uses JMU's brand colors (purple and gold) for theming.
+     */
     const steps: TourProps['steps'] = [
         {
             title: 'Select a Destination',
@@ -244,7 +263,29 @@ export default function CartView() {
         setIsConfirmationModalOpen(false);
         speak("Navigation cancelled");
     };
-
+    /**
+     * Initiates an emergency stop sequence for the golf cart with multiple safety measures.
+     * This function:
+     * 1. Sends negative velocity commands to trigger obstacle braking
+     * 2. Disables automatic control mode
+     * 3. Applies maximum brake pressure
+     * 4. Updates the vehicle state to "stopped"
+     * 5. Provides visual and audio feedback to the user
+     * 
+     * The stop commands are sent repeatedly every 1900ms until explicitly cleared by resume button.
+     * 
+     * Safety Considerations:
+     * - Uses multiple redundant stop mechanisms
+     * - Continues sending stop commands until cart is resumed
+     * - Immediately updates UI state to prevent further navigation inputs
+     * - Provides clear feedback through TTS and status messages
+     * 
+     * @throws {Error} If any part of the stop sequence fails
+     * @example
+     * // Trigger emergency stop
+     * stopCart();
+     * // Later, resume with handleCommand("RESUME")
+     */
     const stopCart = async () => {
         console.log("Initiating proper braking sequence...");
 
@@ -304,12 +345,38 @@ export default function CartView() {
             speak("Stop failed");
         }
     };
-
+    // Sends an alert to the remote dashboard.
     const requestHelp = () => {
         vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
         speak("Help requested");
     }
 
+    /**
+     * Processes voice commands received from the VoiceCommands component.
+     * Acts as the central dispatcher for all voice-controlled cart operations.
+     * 
+     * Supported Commands:
+     * - "STOP": Triggers emergency stop sequence
+     * - "HELP": Requests remote assistance
+     * - "RESUME": Continues navigation after stop
+     * - "GO TO [location]": Initiates navigation to specified location
+     * - "CONFIRM": Confirms pending navigation request
+     * - "CANCEL": Cancels pending navigation request
+     * 
+     * Command Flow:
+     * 1. Resets the voice transcript to prepare for next command
+     * 2. Matches command against known actions
+     * 3. Executes appropriate cart operation
+     * 4. Provides audio and visual feedback
+     * 5. For location commands, uses fuzzy matching to handle variations
+     * 
+     * @param {string} command - The recognized voice command (from VoiceCommands component)
+     * @example
+     * // Typical command flow:
+     * handleCommand("GO TO Festival"); // -> Shows confirmation dialog
+     * handleCommand("CONFIRM");     // -> Begins navigation
+     * handleCommand("STOP");        // -> Emergency stop
+     */
     const handleCommand = (command: string) => {
         console.log("Command received:", command);
         resetTranscript();
@@ -327,7 +394,7 @@ export default function CartView() {
             if (state.stopped) {
                 console.log("Resuming the cart...");
                 
-                // Clear the stop interval if it exists
+                // Clear the stop interval that resends stop messages (for the stop button) if it exists
                 if (stopIntervalRef.current) {
                     clearInterval(stopIntervalRef.current);
                     stopIntervalRef.current = null;
@@ -402,7 +469,7 @@ export default function CartView() {
 
     useEffect(() => {
         return () => {
-            // Clean up interval on unmount
+            // Cleans up stop interval on unmount
             if (stopIntervalRef.current) {
                 clearInterval(stopIntervalRef.current);
             }
