@@ -269,7 +269,7 @@ export default function CartView() {
                 const manualStopMsg = new ROSLIB.Message({ data: false });
                 stop_topic.publish(manualStopMsg);
 
-                // 3. Send direct brake command (255 = max brake pressure)
+                // 3. Send direct brake command (255 = max brake pressure). This may actually be applying breaks as motor_endpoint.py doesn't have a proper way to handle these messages.
                 const directBrakeMsg = new ROSLIB.Message({ data: 255 });
                 brake_cmd.publish(directBrakeMsg);
             };
@@ -307,6 +307,7 @@ export default function CartView() {
 
     const requestHelp = () => {
         vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
+        speak("Help requested");
     }
 
     const handleCommand = (command: string) => {
@@ -319,6 +320,7 @@ export default function CartView() {
         } else if (command === "HELP") {
             console.log("HELP command recognized");
             message.info("Help requested.");
+            requestHelp();
             speak("Help requested");
         } else if (command === "RESUME") {
             console.log("RESUME command recognized");
