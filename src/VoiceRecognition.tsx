@@ -7,7 +7,28 @@ interface VoiceCommandsProps {
     onCommand: (command: string) => void;
     locations: { name: string; displayName: string }[];
 }
-
+/**
+ * A component that handles voice commands for the JACart.
+ * Listens for commands prefixed with "James" and processes them using fuzzy matching.
+ * 
+ * Features:
+ * - Continuous listening with noise suppression
+ * - Wake word ("James") required before commands
+ * - Fuzzy matching for command recognition
+ * - Automatic transcript reset for invalid inputs
+ * - "go to" command with location fuzzy matching
+ * 
+ * Supported Commands:
+ * - stop: Triggers emergency stop
+ * - help: Requests assistance
+ * - resume: Resumes navigation after stop
+ * - go to [location]: Navigates to specified location
+ * - confirm: Confirms current action
+ * - cancel: Cancels current action
+ * 
+ * @param {VoiceCommandsProps} props - Component properties
+ * @returns {JSX.Element} Voice command interface component
+ */
 const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     const commandList = [
         { name: "stop", action: "STOP" },
@@ -72,7 +93,11 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
             },
         ],
     });
-
+    /**
+     * Handles the "go to" command by fuzzy matching location names.
+     * 
+     * @param {string} locationName - The spoken location name to match
+     */
     const handleGoToCommand = (locationName: string) => {
         const locationFuse = new Fuse(locations, {
             keys: ['name'],
@@ -100,6 +125,9 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
 
     // Start listening when the component mounts
     useEffect(() => {
+          /**
+         * Configures microphone with noise suppression and starts listening.
+         */
         const setupMicrophone = async () => {
             try {
             // Configure microphone with noise suppression
