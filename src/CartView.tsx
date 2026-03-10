@@ -29,6 +29,7 @@ import DevMenu from "./ui/DevMenu";
 import VoiceCommands from "./VoiceRecognition";
 import { useTTS } from './useTTS';
 import { vehicleService } from "./services/vehicleService";
+import { anomalyLoggingService } from "./services/anomalyLoggingService";
 
 function LineString(coordinates: Position[]): GeoJSON {
     return {
@@ -251,6 +252,12 @@ export default function CartView() {
 
     const handleConfirmation = () => {
         if (selectedLocation) {
+            // Log "start path to destination" here (this is when the trip actually starts).
+            anomalyLoggingService.logTripStart({
+                destination: selectedLocation.displayName,
+                startMethod: "VOICE_CONFIRM",
+            });
+
             speak(`Now navigating to ${selectedLocation.name}`);
             setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
             navigateToLocation(selectedLocation);
@@ -383,9 +390,22 @@ export default function CartView() {
 
         if (command === "STOP") {
             console.log("STOP command recognized");
+
+            anomalyLoggingService.logStop({
+                isNavigating: state.is_navigating,
+                destination: currentLocation,
+                reason: "voice_command",
+            });
+
             stopCart();
         } else if (command === "HELP") {
             console.log("HELP command recognized");
+
+            anomalyLoggingService.logHelp({
+                isNavigating: state.is_navigating,
+                destination: currentLocation,
+            });
+
             message.info("Help requested.");
             requestHelp();
             speak("Help requested");
@@ -393,15 +413,20 @@ export default function CartView() {
             console.log("RESUME command recognized");
             if (state.stopped) {
                 console.log("Resuming the cart...");
-                
+
+                anomalyLoggingService.logResume({
+                    wasStopped: state.stopped,
+                    destination: currentLocation,
+                });
+
                 // Clear the stop interval that resends stop messages (for the stop button) if it exists
                 if (stopIntervalRef.current) {
                     clearInterval(stopIntervalRef.current);
                     stopIntervalRef.current = null;
                 }
-                    
+
                 // Publish false to manual control topic to disable emergency stop
-                const resumeMsg = new ROSLIB.Message({ data: false });    
+                const resumeMsg = new ROSLIB.Message({ data: false });
                 stop_topic.publish(resumeMsg);
 
                 // Also publish to vehicle_state with stopped: false
