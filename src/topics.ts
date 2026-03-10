@@ -63,3 +63,15 @@ export const brake_cmd = new ROSLIB.Topic({
   name: "/direct_brake",
   messageType: "std_msgs/UInt8"
 });
+
+/**
+ * AI anomaly logging topic
+ *
+ * IMPORTANT: Replace `ai_anomaly_interface/msg/AnomalyMsg` with the actual ROS package/type
+ * that defines your AnomalyMsg.msg in the ROS workspace.
+ */
+export const ai_anomaly_logging = new ROSLIB.Topic({
+  ros: ros,
+  name: "/ai_anomaly_logging",
+  messageType: "anomaly_msg/msg/AnomalyMsg",
+});
