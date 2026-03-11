@@ -73,7 +73,6 @@ declare interface ROSMarker {
 
 /**
  * Anomaly message used for AI anomaly logging.
- * Mirrors the ROS2 msg definition you provided in the screenshot.
  *
  * Notes:
  * - In this UI we only publish TEXT anomalies (type=TEXT, and fill `msg`).
