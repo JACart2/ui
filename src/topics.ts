@@ -63,3 +63,10 @@ export const brake_cmd = new ROSLIB.Topic({
   name: "/direct_brake",
   messageType: "std_msgs/UInt8"
 });
+
+// Add anomaly logging topic for speech recognition
+export const anomaly_logging = new ROSLIB.Topic({
+  ros: ros,
+  name: "/ai_anomaly_logging",
+  messageType: "navigation_interface/msg/AnomalyMsg"
+});
