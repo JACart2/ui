@@ -70,3 +70,15 @@ declare interface ROSMarker {
   mesh_resource?: string; // URL for mesh resources
   mesh_use_embedded_materials?: boolean;
 }
+
+// New message type for anomaly messages (based on template provided by AI anomaly team)
+declare interface AnomalyMsg extends ROSLIB.Message {
+  header: Header;
+  node_name: string;
+  importance: number;  // 0=INFO, 1=WARNING, 2=ERROR
+  type: number;        // 0=TEXT, 1=IMAGE, 2=DATA
+  msg: string;
+  image?: Image;
+  data_type?: string;
+  data?: number[];
+}
