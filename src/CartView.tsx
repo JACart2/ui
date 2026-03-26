@@ -29,6 +29,8 @@ import DevMenu from "./ui/DevMenu";
 import VoiceCommands from "./VoiceRecognition";
 import { useTTS } from './useTTS';
 import { vehicleService } from "./services/vehicleService";
+//import for AI nav logging
+import { ai_anomaly_logging } from "./topics";
 
 function LineString(coordinates: Position[]): GeoJSON {
     return {
@@ -40,6 +42,32 @@ function LineString(coordinates: Position[]): GeoJSON {
         properties: {}
     };
 }
+//publish state for AI anomaly
+const publishUiAnomaly = (opts: {
+    importance: 0 | 1 | 2; // INFO=0 WARNING=1 ERROR=2
+    type: 0 | 1 | 2;       // TEXT=0 IMAGE=1 DATA=2
+    msg: string;
+    frame_id?: string;
+}) => {
+    ai_anomaly_logging.publish(
+        new ROSLIB.Message({
+            header: {
+                // UI doesn't have ROS time; send 0 stamp unless you want to sync with /clock later.
+                stamp: { sec: 0, nanosec: 0 },
+                frame_id: opts.frame_id ?? "cart_ui",
+            },
+            node_name: "CartView",
+            importance: opts.importance,
+            type: opts.type,
+            msg: opts.msg,
+
+            // Optional fields for other types; keep empty for TEXT events.
+            data_type: "",
+            data: [],
+            // image: omitted unless type === IMAGE
+        })
+    );
+};
 
 
 export default function CartView() {
@@ -289,6 +317,13 @@ export default function CartView() {
     const stopCart = async () => {
         console.log("Initiating proper braking sequence...");
 
+        //publish STOPED CART for AI anomaly
+        publishUiAnomaly({
+            importance: 2, // ERROR
+            type: 0,       // TEXT
+            msg: "UI: Emergency stop pressed",
+        });
+
         try {
             // Clear any existing interval
             if (stopIntervalRef.current) {
@@ -347,6 +382,12 @@ export default function CartView() {
     };
     // Sends an alert to the remote dashboard.
     const requestHelp = () => {
+        //Publish REQUEST HELP for AI anomaly
+        publishUiAnomaly({
+            importance: 1, // WARNING (or 0 for INFO)
+            type: 0,       // TEXT
+            msg: "UI: Help requested",
+        });
         vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
         speak("Help requested");
     }
@@ -393,15 +434,22 @@ export default function CartView() {
             console.log("RESUME command recognized");
             if (state.stopped) {
                 console.log("Resuming the cart...");
-                
+
+                //Pulished RESUME to Ai anomaly
+                publishUiAnomaly({
+                    importance: 0, // INFO
+                    type: 0,       // TEXT
+                    msg: "UI: Resume pressed",
+                });
+
                 // Clear the stop interval that resends stop messages (for the stop button) if it exists
                 if (stopIntervalRef.current) {
                     clearInterval(stopIntervalRef.current);
                     stopIntervalRef.current = null;
                 }
-                    
+
                 // Publish false to manual control topic to disable emergency stop
-                const resumeMsg = new ROSLIB.Message({ data: false });    
+                const resumeMsg = new ROSLIB.Message({ data: false });
                 stop_topic.publish(resumeMsg);
 
                 // Also publish to vehicle_state with stopped: false
