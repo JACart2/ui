@@ -69,6 +69,6 @@ export const brake_cmd = new ROSLIB.Topic({
  */
 export const ai_anomaly_logging = new ROSLIB.Topic({
   ros: ros,
-  name: "/ai_anomaly_logging",
+  name: "ai_anomaly_logging",
   messageType: "anomaly_msg/msg/AnomalyMsg",
 });
