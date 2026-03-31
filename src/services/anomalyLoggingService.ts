@@ -95,8 +95,6 @@ function publishText(params: {
   importance: number;
   msg: string;
 }) {
-  // NOTE: roslib doesn't require a "real" message class import.
-  // It sends JSON-like objects that rosbridge maps to ROS messages.
   const message = new ROSLIB.Message({
     header: {
       seq: 0,
@@ -107,6 +105,9 @@ function publishText(params: {
     importance: params.importance,
     type: AnomalyType.TEXT,
     msg: params.msg,
+    image: null,
+    data_type: "",
+    data: [],
   } as Partial<AnomalyMsg>);
 
   try {
