@@ -111,6 +111,8 @@ function publishText(params: {
   } as Partial<AnomalyMsg>);
 
   try {
+    console.log("ROS connected:", ros.isConnected);
+    console.log("Topic advertised:", ai_anomaly_logging.isAdvertised);
     ai_anomaly_logging.publish(message);
     console.log("[ai_anomaly_logging]", params.msg);
   } catch (err) {
