@@ -95,7 +95,7 @@ declare interface AnomalyMsg extends ROSLIB.Message {
 
   msg: string;
 
-  image?: Image; // used when type == IMAGE
-  data_type?: string; // used when type == DATA
-  data?: number[]; // uint8[] in ROS; represent as number[] in TS
+  image: Image; // used when type == IMAGE
+  data_type: string; // used when type == DATA
+  data: number[]; // uint8[] in ROS; represent as number[] in TS
 }
