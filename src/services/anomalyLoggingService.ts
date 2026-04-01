@@ -82,11 +82,11 @@ enum AnomalyType {
   DATA = 2,
 }
 
-function nowRosStamp(): { secs: number; nsecs: number } {
+function nowRosStamp(): { sec: number; nanosec: number } {
   const ms = Date.now();
   return {
-    secs: Math.floor(ms / 1000),
-    nsecs: (ms % 1000) * 1_000_000,
+    sec: Math.floor(ms / 1000),
+    nanosec: (ms % 1000) * 1_000_000,
   };
 }
 
@@ -97,7 +97,6 @@ function publishText(params: {
 }) {
   const message = new ROSLIB.Message({
     header: {
-      seq: 0,
       stamp: nowRosStamp(),
       frame_id: "ui",
     },
