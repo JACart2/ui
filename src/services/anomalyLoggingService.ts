@@ -112,7 +112,7 @@ function publishText(params: {
   try {
     console.log("Topic advertised:", ai_anomaly_logging.isAdvertised);
     ai_anomaly_logging.publish(message);
-    console.log("[ai_anomaly_logging]", params.msg);
+    console.log("[ai_anomaly_logging]", message);
   } catch (err) {
     console.warn("[ai_anomaly_logging] failed to publish", err);
   }
