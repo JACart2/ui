@@ -111,9 +111,12 @@ function publishText(params: {
   } as Partial<AnomalyMsg>);
 
   try {
-    console.log("Topic advertised:", ai_anomaly_logging.isAdvertised);
-    ai_anomaly_logging.publish(message);
-    console.log("[ai_anomaly_logging]", message);
+    const stringMessage = new ROSLIB.Message({
+      data: JSON.stringify(message)
+    });
+    ai_anomaly_logging.publish(stringMessage);
+    console.log("[ai_anomaly_logging -- Regular Message]", message);
+    console.log("[ai_anomaly_logging -- String Message]", stringMessage);
   } catch (err) {
     console.warn("[ai_anomaly_logging] failed to publish", err);
   }
