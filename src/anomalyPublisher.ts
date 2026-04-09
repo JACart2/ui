@@ -41,8 +41,11 @@ export const publishSpeechToAnomalyTopic = (transcribedText: string): void => {
 
   // Publish to the topic
   try {
-    anomaly_logging.publish(anomalyMessage);
-    console.log(`Published speech to anomaly topic: "${transcribedText}"`);
+    const stringMessage = new ROSLIB.Message({
+      data: JSON.stringify(anomalyMessage)
+    });
+    anomaly_logging.publish(stringMessage);
+    console.log(`Published speech to anomaly topic: "${stringMessage}"`);
   } catch (error) {
     console.error("Error publishing to anomaly topic:", error);
   }
