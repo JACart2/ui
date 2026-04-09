@@ -193,7 +193,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     useEffect(() => {
         if (transcript && transcript !== lastPublishedTranscript.current) {
             // Publish the full transcript to the anomaly topic
-            publishSpeechToAnomalyTopic(transcript);
+            publishSpeechToAnomalyTopic("Someone in the cart said:" + transcript);
             lastPublishedTranscript.current = transcript;
         }
     }, [transcript]);
