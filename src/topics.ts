@@ -67,7 +67,7 @@ export const brake_cmd = new ROSLIB.Topic({
 /**
  * AI anomaly logging topic
  */
-export const anomaly_logging = new ROSLIB.Topic({
+export const ai_anomaly_logging = new ROSLIB.Topic({
   ros: ros,
   name: "ai_anomaly_logging_ui",
   messageType: "std_msgs/String",
