@@ -1,5 +1,5 @@
 import * as ROSLIB from "roslib";
-import { anomaly_logging } from "./topics";
+import { ai_anomaly_logging } from "./topics";
 import type { AnomalyMsg } from "./MessageTypes";
 
 /**
@@ -44,8 +44,8 @@ export const publishSpeechToAnomalyTopic = (transcribedText: string): void => {
     const stringMessage = new ROSLIB.Message({
       data: JSON.stringify(anomalyMessage)
     });
-    anomaly_logging.publish(anomalyMessage);
-    anomaly_logging.publish(stringMessage);
+    console.log(`Published speech to anomaly topic: "${anomalyMessage}"`);
+    ai_anomaly_logging.publish(stringMessage);
     console.log(`Published speech to anomaly topic: "${stringMessage}"`);
   } catch (error) {
     console.error("Error publishing to anomaly topic:", error);
