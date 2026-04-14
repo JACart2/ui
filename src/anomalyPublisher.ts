@@ -47,7 +47,7 @@ export const publishSpeechToAnomalyTopic = (transcribedText: string): void => {
     });
     ai_anomaly_logging.publish(stringMessage);
     console.log("Published speech to anomaly topic:" ,stringMessage);
-    console.log("Published speech to anomaly topic:" ,anomalyMessage});
+    console.log("Published speech to anomaly topic:" ,anomalyMessage);
   } catch (error) {
     console.error("Error publishing to anomaly topic:", error);
   }
