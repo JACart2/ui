@@ -1,6 +1,8 @@
 import * as ROSLIB from "roslib";
 import { ai_anomaly_logging } from "../topics";
 
+type CommandSource = "voice" | "touch" | "unknown";
+
 /**
  * A small helper for publishing AnomalyMsg-style events from the UI.
  * This follows the existing repo pattern: ROSLIB.Topic + ROSLIB.Message
@@ -12,6 +14,7 @@ import { ai_anomaly_logging } from "../topics";
 export const anomalyLoggingService = {
   logStop: (params: {
     nodeName?: string;
+    source?: CommandSource;
     isNavigating?: boolean;
     destination?: string | null;
     reason?: string;
@@ -20,7 +23,8 @@ export const anomalyLoggingService = {
       nodeName: params.nodeName ?? "ui_voice",
       importance: Importance.ERROR,
       msg:
-        `VOICE_CMD STOP: Emergency stop requested by user.` +
+        `USER_CMD STOP: Emergency stop requested by user.` +
+        ` source=${params.source ?? "unknown"}.` +
         (typeof params.isNavigating === "boolean" ? ` is_navigating=${params.isNavigating}.` : "") +
         (params.destination ? ` destination="${params.destination}".` : "") +
         (params.reason ? ` reason="${params.reason}".` : ""),
@@ -29,6 +33,7 @@ export const anomalyLoggingService = {
 
   logResume: (params: {
     nodeName?: string;
+    source?: CommandSource;
     wasStopped?: boolean;
     destination?: string | null;
   } = {}) => {
@@ -36,7 +41,8 @@ export const anomalyLoggingService = {
       nodeName: params.nodeName ?? "ui_voice",
       importance: Importance.INFO,
       msg:
-        `VOICE_CMD RESUME: User resumed ride.` +
+        `USER_CMD RESUME: User resumed ride.` +
+        ` source=${params.source ?? "unknown"}.` +
         (typeof params.wasStopped === "boolean" ? ` was_stopped=${params.wasStopped}.` : "") +
         (params.destination ? ` destination="${params.destination}".` : ""),
     });
@@ -44,6 +50,7 @@ export const anomalyLoggingService = {
 
   logHelp: (params: {
     nodeName?: string;
+    source?: CommandSource;
     destination?: string | null;
     isNavigating?: boolean;
   } = {}) => {
@@ -51,7 +58,8 @@ export const anomalyLoggingService = {
       nodeName: params.nodeName ?? "ui_voice",
       importance: Importance.WARNING,
       msg:
-        `VOICE_CMD HELP: User requested help.` +
+        `USER_CMD HELP: User requested help.` +
+        ` source=${params.source ?? "unknown"}.` +
         (typeof params.isNavigating === "boolean" ? ` is_navigating=${params.isNavigating}.` : "") +
         (params.destination ? ` destination="${params.destination}".` : ""),
     });
@@ -59,13 +67,16 @@ export const anomalyLoggingService = {
 
   logTripStart: (params: {
     nodeName?: string;
+    source?: CommandSource;
     destination: string;
     startMethod: "VOICE_CONFIRM" | "UI_CONFIRM" | "UNKNOWN";
   }) => {
     publishText({
       nodeName: params.nodeName ?? "ui_voice",
       importance: Importance.INFO,
-      msg: `TRIP_START: Navigation started to "${params.destination}" via ${params.startMethod}.`,
+      msg:
+        `TRIP_START: Navigation started to "${params.destination}" via ${params.startMethod}.` +
+        ` source=${params.source ?? "unknown"}.`,
     });
   },
 };
@@ -82,7 +93,7 @@ enum AnomalyType {
   DATA = 2,
 }
 
-function nowRosStamp(): { secs: number; nsecs: number } {
+function nowRosStamp(): { sec: number; nanosec: number } {
   const ms = Date.now();
   return {
     sec: Math.floor(ms / 1000),
@@ -97,7 +108,7 @@ function publishText(params: {
 }) {
   const message = new ROSLIB.Message({
     header: {
-      seq : 0,
+      seq: 0,
       stamp: nowRosStamp(),
       frame_id: "ui",
     },
@@ -112,8 +123,9 @@ function publishText(params: {
 
   try {
     const stringMessage = new ROSLIB.Message({
-      data: JSON.stringify(message)
+      data: JSON.stringify(message),
     });
+
     ai_anomaly_logging.publish(stringMessage);
     console.log("[ai_anomaly_logging -- Regular Message]", message);
     console.log("[ai_anomaly_logging -- String Message]", stringMessage);
