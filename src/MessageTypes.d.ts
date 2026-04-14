@@ -71,14 +71,31 @@ declare interface ROSMarker {
   mesh_use_embedded_materials?: boolean;
 }
 
-// New message type for anomaly messages (based on template provided by AI anomaly team)
+/**
+ * Anomaly message used for AI anomaly logging.
+ *
+ * Notes:
+ * - In this UI we only publish TEXT anomalies (type=TEXT, and fill `msg`).
+ * - `image`, `data_type`, and `data` are included for completeness but unused for now.
+ */
 declare interface AnomalyMsg extends ROSLIB.Message {
-  header: Header;
-  node_name: string;
-  importance: number;  // 0=INFO, 1=WARNING, 2=ERROR
-  type: number;        // 0=TEXT, 1=IMAGE, 2=DATA
+  header: Header; // timestamp + frame reference
+  node_name: string; // name of publishing node
+
+  // constants (mirroring msg definition)
+  INFO: 0;
+  WARNING: 1;
+  ERROR: 2;
+  importance: number;
+
+  TEXT: 0;
+  IMAGE: 1;
+  DATA: 2;
+  type: number;
+
   msg: string;
-  image?: Image;
-  data_type?: string;
-  data?: number[];
+
+  image: Image; // used when type == IMAGE
+  data_type: string; // used when type == DATA
+  data: number[]; // uint8[] in ROS; represent as number[] in TS
 }
