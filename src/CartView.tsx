@@ -521,6 +521,28 @@ export default function CartView() {
     }, [speak, currentLocation]);
 
     useEffect(() => {
+        const handleStopSignal = (data: any) => {
+        console.log("Stop signal received from dashboard:", data);
+        // Trigger the emergency stop
+        if (data.target === "all" || data.target === "James") {  // Replace "James" with dynamic cart name
+            stopCart();
+            message.warning("Stop signal received from dashboard - Emergency stop activated");
+        }
+      };
+
+  // Check localStorage for stop signal flag periodically
+  const stopSignalInterval = setInterval(() => {
+    const flag = localStorage.getItem("stop-signal-received");
+    if (flag === "true") {
+      handleStopSignal({ target: "James" });  // Replace with dynamic cart name
+      localStorage.removeItem("stop-signal-received");
+    }
+  }, 500);
+
+  return () => clearInterval(stopSignalInterval);
+}, []);
+
+    useEffect(() => {
         if (mapRef.current == undefined) return;
 
         registerCart();
