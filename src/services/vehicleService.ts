@@ -55,4 +55,9 @@ export const vehicleService = {
 
     return res.json();
   },
+  registerStopSignalHandler(cartName: string, handler: () => void) {
+    // Store this for when we set up Socket.IO connection
+    localStorage.setItem(`stop-signal-handler-${cartName}`, JSON.stringify({ active: true }));
+    return handler;
+  },
 };
