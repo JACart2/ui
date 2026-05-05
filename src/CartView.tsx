@@ -29,6 +29,9 @@ import DevMenu from "./ui/DevMenu";
 import VoiceCommands from "./VoiceRecognition";
 import { useTTS } from './useTTS';
 import { vehicleService } from "./services/vehicleService";
+import { anomalyLoggingService } from "./services/anomalyLoggingService";
+
+type CommandSource = "voice" | "touch";
 
 function LineString(coordinates: Position[]): GeoJSON {
     return {
@@ -54,6 +57,7 @@ export default function CartView() {
     const [helpRequested, setHelpRequested] = useState(false);
     const { speak } = useTTS();
     const stopIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [pendingCommandSource, setPendingCommandSource] = useState<CommandSource>("touch");
 
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
@@ -243,14 +247,21 @@ export default function CartView() {
     const handleLocationSelect = (location: { lat: number, long: number, name: string, displayName: string, disabled?: boolean }) => {
         if (location?.disabled) return;
 
+        setPendingCommandSource("touch");
         setSelectedLocation(location);
         setIsConfirmationModalOpen(true);
-        setCurrentLocation(null); // Clear current location when selecting a new one
+        setCurrentLocation(null);
         speak(`Confirm to go to ${location.name}`);
     };
 
     const handleConfirmation = () => {
         if (selectedLocation) {
+            anomalyLoggingService.logTripStart({
+                source: pendingCommandSource,
+                destination: selectedLocation.displayName,
+                startMethod: pendingCommandSource === "voice" ? "VOICE_CONFIRM" : "UI_CONFIRM",
+            });
+
             speak(`Now navigating to ${selectedLocation.name}`);
             setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
             navigateToLocation(selectedLocation);
@@ -377,34 +388,45 @@ export default function CartView() {
      * handleCommand("CONFIRM");     // -> Begins navigation
      * handleCommand("STOP");        // -> Emergency stop
      */
-    const handleCommand = (command: string) => {
+    const handleCommand = (command: string, source: CommandSource = "voice") => {
         console.log("Command received:", command);
         resetTranscript();
 
         if (command === "STOP") {
-            console.log("STOP command recognized");
+            anomalyLoggingService.logStop({
+                source,
+                isNavigating: state.is_navigating,
+                destination: currentLocation,
+                reason: source === "voice" ? "voice_command" : "touch_command",
+            });
+
             stopCart();
         } else if (command === "HELP") {
-            console.log("HELP command recognized");
+            anomalyLoggingService.logHelp({
+                source,
+                isNavigating: state.is_navigating,
+                destination: currentLocation,
+            });
+
             message.info("Help requested.");
             requestHelp();
             speak("Help requested");
         } else if (command === "RESUME") {
-            console.log("RESUME command recognized");
             if (state.stopped) {
-                console.log("Resuming the cart...");
-                
-                // Clear the stop interval that resends stop messages (for the stop button) if it exists
+                anomalyLoggingService.logResume({
+                    source,
+                    wasStopped: state.stopped,
+                    destination: currentLocation,
+                });
+
                 if (stopIntervalRef.current) {
                     clearInterval(stopIntervalRef.current);
                     stopIntervalRef.current = null;
                 }
-                    
-                // Publish false to manual control topic to disable emergency stop
-                const resumeMsg = new ROSLIB.Message({ data: false });    
+
+                const resumeMsg = new ROSLIB.Message({ data: false });
                 stop_topic.publish(resumeMsg);
 
-                // Also publish to vehicle_state with stopped: false
                 const stateMsg = new ROSLIB.Message({
                     is_navigating: true,
                     reached_destination: false,
@@ -415,29 +437,23 @@ export default function CartView() {
                 setState((prevState) => ({ ...prevState, stopped: false, is_navigating: true }));
                 message.success("Cart resumed.");
                 speak("Cart resuming navigation");
-            } else {
-                console.log("Cart is not stopped.");
             }
         } else if (command.startsWith("GO TO")) {
             const locationName = command.replace("GO TO", "").trim();
             const location = locations.find((loc) => loc.name.toLowerCase() === locationName.toLowerCase());
             if (location) {
-                console.log(`Navigating to ${location.displayName}...`);
+                setPendingCommandSource(source);
                 setSelectedLocation(location);
                 setIsConfirmationModalOpen(true);
                 message.info(`Say "James Confirm" to navigate to ${location.displayName} or "James Cancel" to cancel.`);
-                setState(prev => ({ ...prev }));
                 speak(`Confirm to go to ${location.displayName}`);
             } else {
-                console.log(`Location "${locationName}" not found.`);
                 message.warning(`Location "${locationName}" not found.`);
                 speak(`Location ${locationName} not found`);
             }
         } else if (command === "CONFIRM" && isConfirmationModalOpen) {
-            console.log("CONFIRM command recognized");
             handleConfirmation();
         } else if (command === "CANCEL" && isConfirmationModalOpen) {
-            console.log("CANCEL command recognized");
             handleConfirmationCancel();
         }
     };
@@ -771,7 +787,7 @@ export default function CartView() {
                             </li>
                         ))}
                     </ul>
-                    <VoiceCommands onCommand={handleCommand} locations={locations} />
+                    <VoiceCommands onCommand={(command) => handleCommand(command, "voice")} locations={locations} />
                     <div id='voice-transcript-container'>
                         <div
                             style={{
@@ -845,7 +861,7 @@ export default function CartView() {
                                 icon={<FaStopCircle />}
                                 ref={ref4}
                                 danger
-                                onClick={stopCart}
+                                onClick={() => handleCommand("STOP", "touch")}
                             >
                                 Press for Emergency Stop
                             </Button>
@@ -855,13 +871,13 @@ export default function CartView() {
                                 type="primary"
                                 size="large"
                                 icon={<FaPlayCircle />}
-                                onClick={() => handleCommand("RESUME")}
+                                onClick={() => handleCommand("RESUME", "touch")}
                             >
                                 Press to Resume Trip
                             </Button>
                         ) : null}
 
-                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5} onClick={() => requestHelp()}>
+                        <Button id="request-help" type="primary" size="large" icon={<IoCall />} ref={ref5} onClick={() => handleCommand("HELP", "touch")}>
                             {helpRequested ? "Help Requested" : "Press to Request Help"}
                         </Button>
                     </Flex>

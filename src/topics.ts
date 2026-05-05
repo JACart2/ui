@@ -5,6 +5,11 @@ const ros = new ROSLIB.Ros({
   url: "ws://localhost:9090",
 });
 
+ros.on("connection", () => {
+  console.log("Connected to ROS");
+  console.log("Available ROS message types:", ros.messageTypes); // Log all available message types
+});
+
 ros.on("connection", () => console.log("Connected to ROS"));
 
 // Topics
