@@ -63,3 +63,12 @@ export const brake_cmd = new ROSLIB.Topic({
   name: "/direct_brake",
   messageType: "std_msgs/UInt8"
 });
+
+/**
+ * AI anomaly logging topic
+ */
+export const ai_anomaly_logging = new ROSLIB.Topic({
+  ros: ros,
+  name: "ai_anomaly_logging_ui",
+  messageType: "std_msgs/String",
+});

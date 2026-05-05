@@ -1,15 +1,30 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { message } from "antd";
 import Fuse from 'fuse.js';
+import { publishSpeechToAnomalyTopic } from "./anomalyPublisher";
 
 interface VoiceCommandsProps {
     onCommand: (command: string) => void;
     locations: { name: string; displayName: string }[];
 }
 /**
+* Branch updates:
+* Line 6: Import publisher 
+* Line 48: Added UseRef to track last published transcript (prevents duplicates)
+* Lines 158-164: New UseEffect hook that publishes every transcript change to anomaly topic
+*      Fires whenever transcript updates
+*      Checks if its different from last published version
+*      Calls publishSpeechToAnomalyTopic() with current speech
+*      Updates UseRef to track what was published 
+*/
+
+
+
+/**
  * A component that handles voice commands for the JACart.
  * Listens for commands prefixed with "James" and processes them using fuzzy matching.
+ * Also publishes all detected speech to the anomaly logging ROS2 topic.
  * 
  * Features:
  * - Continuous listening with noise suppression
@@ -17,6 +32,7 @@ interface VoiceCommandsProps {
  * - Fuzzy matching for command recognition
  * - Automatic transcript reset for invalid inputs
  * - "go to" command with location fuzzy matching
+ * - Publishes all speech to ai_anomaly_logging topic for anomaly detection
  * 
  * Supported Commands:
  * - stop: Triggers emergency stop
@@ -38,6 +54,9 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         { name: "confirm", action: "CONFIRM" },
         { name: "cancel", action: "CANCEL" },
     ];
+
+    // Track last published transcript to avoid duplicates
+    const lastPublishedTranscript = useRef<string>("");
 
     const {
         transcript,
@@ -93,6 +112,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
             },
         ],
     });
+
     /**
      * Handles the "go to" command by fuzzy matching location names.
      * 
@@ -125,36 +145,36 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
 
     // Start listening when the component mounts
     useEffect(() => {
-          /**
+        /**
          * Configures microphone with noise suppression and starts listening.
          */
         const setupMicrophone = async () => {
             try {
-            // Configure microphone with noise suppression
-            await navigator.mediaDevices.getUserMedia({ 
-                audio: { 
-                noiseSuppression: true,
-                echoCancellation: true,
-                autoGainControl: true 
-                },
-                video: false
-            });
-            console.log("Microphone configured with noise suppression");
+                // Configure microphone with noise suppression
+                await navigator.mediaDevices.getUserMedia({ 
+                    audio: { 
+                        noiseSuppression: true,
+                        echoCancellation: true,
+                        autoGainControl: true 
+                    },
+                    video: false
+                });
+                console.log("Microphone configured with noise suppression");
             } catch (error) {
-            console.error("Error configuring microphone:", error);
+                console.error("Error configuring microphone:", error);
             }
         };
 
         const startListening = () => {
             if (browserSupportsSpeechRecognition) {
-            console.log("Starting speech recognition...");
-            SpeechRecognition.startListening({
-                continuous: true,
-                language: 'en-US'
-            });
+                console.log("Starting speech recognition...");
+                SpeechRecognition.startListening({
+                    continuous: true,
+                    language: 'en-US'
+                });
             } else {
-            console.log("Your browser does not support speech recognition.");
-            message.warning("Your browser does not support speech recognition.");
+                console.log("Your browser does not support speech recognition.");
+                message.warning("Your browser does not support speech recognition.");
             }
         };
 
@@ -165,6 +185,18 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
             SpeechRecognition.stopListening();
         };
     }, [browserSupportsSpeechRecognition]);
+
+    /**
+     * Effect to publish ALL transcribed speech to the anomaly logging topic.
+     * This runs whenever the transcript changes, capturing every word spoken.
+     */
+    useEffect(() => {
+        if (transcript && transcript !== lastPublishedTranscript.current) {
+            // Publish the full transcript to the anomaly topic
+            publishSpeechToAnomalyTopic("Someone in the cart said:" + transcript);
+            lastPublishedTranscript.current = transcript;
+        }
+    }, [transcript]);
 
     // Aggressively reset transcript when it doesn't start with "James"
     useEffect(() => {
