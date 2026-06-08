@@ -54,25 +54,21 @@ export function disconnectFromRos() {
 }
 
 ros.on("connection", () => {
-  console.log("Connected to ROS:", ROSBRIDGE_URL);
-  isConnecting = false;
-
-  if (reconnectTimer !== null) {
-    window.clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
+  console.log("Connected to ROS");
 });
 
 ros.on("error", (error) => {
-  console.error("ROS connection error:", error);
-  isConnecting = false;
-  scheduleReconnect();
+  console.error("ROS connection error object:", error);
+  console.error("ROS URL was:", ROSBRIDGE_URL);
 });
 
-ros.on("close", () => {
-  console.warn("ROS connection closed. Retrying...");
-  isConnecting = false;
-  scheduleReconnect();
+ros.on("close", (event) => {
+  console.warn("ROS connection closed:", event);
+});
+
+ros.on("connection", () => {
+  console.log("Connected to ROS");
+  console.log("Available ROS message types:", ros.messageTypes); // Log all available message types
 });
 
 // Start initial connection attempt.
