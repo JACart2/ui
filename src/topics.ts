@@ -10,11 +10,12 @@ ros.on("connection", () => {
 });
 
 ros.on("error", (error) => {
-  console.error("ROS connection error:", error);
+  console.error("ROS connection error object:", error);
+  console.error("ROS URL was:", ROSBRIDGE_URL);
 });
 
-ros.on("close", () => {
-  console.warn("ROS connection closed");
+ros.on("close", (event) => {
+  console.warn("ROS connection closed:", event);
 });
 
 ros.on("connection", () => {
