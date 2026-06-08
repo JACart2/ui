@@ -5,16 +5,7 @@ import maplibregl, { GeoJSONSource, Marker, Popup } from "maplibre-gl";
 import GeoJSON, { Position } from "geojson";
 type GeoJSON = GeoJSON.GeoJSON;
 import * as ROSLIB from "roslib";
-import {
-    clicked_point,
-    vehicle_state,
-    visual_path,
-    limited_pose,
-    left_image,
-    stop_topic,
-    nav_cmd,
-    brake_cmd
-} from "./topics";
+import { ros, clicked_point, vehicle_state, visual_path, limited_pose, left_image, stop_topic, nav_cmd, brake_cmd } from "./topics";
 import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
 import locations from "./locations.json";
@@ -55,6 +46,7 @@ export default function CartView() {
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, long: number, name: string, displayName: string } | null>(null);
     const [isNewUser, setIsNewUser] = useState(false);
     const [helpRequested, setHelpRequested] = useState(false);
+    const [rosConnected, setRosConnected] = useState(false);
     const { speak } = useTTS();
     const stopIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [pendingCommandSource, setPendingCommandSource] = useState<CommandSource>("touch");
@@ -65,6 +57,29 @@ export default function CartView() {
         stopped: false,
     });
 
+    useEffect(() => {
+        const handleConnection = () => setRosConnected(true);
+        const handleClose = () => setRosConnected(false);
+        const handleError = () => setRosConnected(false);
+    
+        setRosConnected(ros.isConnected);
+    
+        ros.on("connection", handleConnection);
+        ros.on("close", handleClose);
+        ros.on("error", handleError);
+    
+        const interval = window.setInterval(() => {
+            setRosConnected(ros.isConnected);
+        }, 1000);
+    
+        return () => {
+            ros.off("connection", handleConnection);
+            ros.off("close", handleClose);
+            ros.off("error", handleError);
+            window.clearInterval(interval);
+        };
+    }, []);
+    
     const PIN_COLORS = [
         'red',
         'blue',
@@ -493,14 +508,34 @@ export default function CartView() {
     }, []);
 
     function navigateTo(lat: number, lng: number) {
-        console.log(`Target Coordinates: ${lat}, ${lng}`);
-        const [x, y] = lngLatToMapCoords({ lat, lng });
-        const target = new ROSLIB.Message({
-            point: { x, y, z: 0 },
-        });
-        clicked_point.publish(target);
+      if (!ros.isConnected) {
+        console.error("Cannot publish destination: ROS is not connected");
+        message.error("Cannot navigate: ROS is not connected");
+        return;
+      }
+    
+      console.log(`Target Coordinates: ${lat}, ${lng}`);
+    
+      const [x, y] = lngLatToMapCoords({ lat, lng });
+    
+      const target = new ROSLIB.Message({
+        header: {
+          stamp: {
+            sec: 0,
+            nanosec: 0,
+          },
+          frame_id: "map",
+        },
+        point: {
+          x,
+          y,
+          z: 0,
+        },
+      });
+    
+      console.log("Publishing /clicked_point:", target);
+      clicked_point.publish(target);
     }
-
     function navigateToLocation(location: { lat: number, long: number, name: string, displayName: string }) {
         console.log("Navigating to: " + location.displayName);
         setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
