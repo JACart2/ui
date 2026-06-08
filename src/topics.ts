@@ -8,6 +8,7 @@ const RECONNECT_INTERVAL_MS = 2000;
 export const ros = new ROSLIB.Ros({});
 
 let reconnectTimer: number | null = null;
+let isConnecting = false;
 let manuallyClosed = false;
 
 function scheduleReconnect() {
@@ -17,14 +18,17 @@ function scheduleReconnect() {
   reconnectTimer = window.setTimeout(() => {
     reconnectTimer = null;
 
-    if (!ros.isConnected) {
+    if (!ros.isConnected && !isConnecting) {
       connectToRos();
     }
   }, RECONNECT_INTERVAL_MS);
 }
 
 export function connectToRos() {
-  if (ros.isConnected) return;
+  if (ros.isConnected || isConnecting) return;
+
+  manuallyClosed = false;
+  isConnecting = true;
 
   console.log("Attempting ROS connection:", ROSBRIDGE_URL);
 
@@ -32,12 +36,14 @@ export function connectToRos() {
     ros.connect(ROSBRIDGE_URL);
   } catch (error) {
     console.error("ROS connect threw error:", error);
+    isConnecting = false;
     scheduleReconnect();
   }
 }
 
 export function disconnectFromRos() {
   manuallyClosed = true;
+  isConnecting = false;
 
   if (reconnectTimer !== null) {
     window.clearTimeout(reconnectTimer);
@@ -49,6 +55,7 @@ export function disconnectFromRos() {
 
 ros.on("connection", () => {
   console.log("Connected to ROS:", ROSBRIDGE_URL);
+  isConnecting = false;
 
   if (reconnectTimer !== null) {
     window.clearTimeout(reconnectTimer);
@@ -58,11 +65,13 @@ ros.on("connection", () => {
 
 ros.on("error", (error) => {
   console.error("ROS connection error:", error);
+  isConnecting = false;
   scheduleReconnect();
 });
 
 ros.on("close", () => {
   console.warn("ROS connection closed. Retrying...");
+  isConnecting = false;
   scheduleReconnect();
 });
 
@@ -71,7 +80,7 @@ connectToRos();
 
 // Periodic safety check in case the websocket fails silently.
 window.setInterval(() => {
-  if (!ros.isConnected) {
+  if (!ros.isConnected && !isConnecting) {
     console.warn("ROS still disconnected. Retrying connection...");
     connectToRos();
   }
@@ -135,6 +144,6 @@ export const brake_cmd = new ROSLIB.Topic({
 // ai_anomaly_logging
 export const ai_anomaly_logging = new ROSLIB.Topic({
   ros,
-  name: "ai_anomaly_logging_ui",
+  name: "/ai_anomaly_logging_ui",
   messageType: "std_msgs/String",
 });
