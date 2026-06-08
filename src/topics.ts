@@ -7,6 +7,18 @@ const ros = new ROSLIB.Ros({
 
 ros.on("connection", () => {
   console.log("Connected to ROS");
+});
+
+ros.on("error", (error) => {
+  console.error("ROS connection error:", error);
+});
+
+ros.on("close", () => {
+  console.warn("ROS connection closed");
+});
+
+ros.on("connection", () => {
+  console.log("Connected to ROS");
   console.log("Available ROS message types:", ros.messageTypes); // Log all available message types
 });
 
