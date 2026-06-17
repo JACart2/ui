@@ -26,7 +26,7 @@
     "lat": 38.434257,
     "long": -78.864156,
     "url": "https://map.jmu.edu/?id=1869#!m/576605",
-    "disabled": true
+    "disabled": false
   },
   {
     "name": "paul jennings hall",
@@ -34,7 +34,7 @@
     "lat": 38.430546,
     "long": -78.865645,
     "url": "https://map.jmu.edu/?id=1869#!m/593002",
-    "disabled": true
+    "disabled": false
   },
   {
     "name": "E-hall",
@@ -42,6 +42,6 @@
     "lat": 38.431657,
     "long": -78.860881,
     "url": "https://map.jmu.edu/?id=1869#!m/622822",
-    "disabled": true
+    "disabled": false
   }
 ]
