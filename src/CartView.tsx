@@ -269,19 +269,33 @@ export default function CartView() {
         speak(`Confirm to go to ${location.name}`);
     };
 
-    const handleConfirmation = () => {
-        if (selectedLocation) {
-            anomalyLoggingService.logTripStart({
-                source: pendingCommandSource,
-                destination: selectedLocation.displayName,
-                startMethod: pendingCommandSource === "voice" ? "VOICE_CONFIRM" : "UI_CONFIRM",
-            });
-
-            speak(`Now navigating to ${selectedLocation.name}`);
-            setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
-            navigateToLocation(selectedLocation);
-        }
-        setIsConfirmationModalOpen(false);
+    const handleConfirmation = async () => {
+      if (selectedLocation) {
+        anomalyLoggingService.logTripStart({
+          source: pendingCommandSource,
+          destination: selectedLocation.displayName,
+          startMethod: pendingCommandSource === "voice" ? "VOICE_CONFIRM" : "UI_CONFIRM",
+        });
+    
+        speak(`Now navigating to ${selectedLocation.name}`);
+    
+        setState(prev => ({
+          ...prev,
+          is_navigating: true,
+          reached_destination: false,
+        }));
+          
+        await vehicleService.updateTrip(
+          import.meta.env.VITE_CART_NAME ?? "james",
+          {
+            startLocation: "Current location",
+            endLocation: selectedLocation.displayName,
+            tripProgress: 0,
+          }
+        );
+        navigateToLocation(selectedLocation);
+      }
+      setIsConfirmationModalOpen(false);
     };
 
     const handleConfirmationCancel = () => {
