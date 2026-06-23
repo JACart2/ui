@@ -1,13 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 console.log(import.meta.env);
 
-// const DEFAULT_SERVER_IP =
-//   import.meta.env.VITE_SERVER_IP ?? "http://10.147.17.17:8002/";
-const DEFAULT_SERVER_IP = "https://35.153.174.48/";
+/* http://10.247.225.41:8000/ is the fallback*/
+function withTrailingSlash(url: string) {
+  return url.endsWith("/") ? url : `${url}/`;
+}
+
+const DEFAULT_SERVER_IP = withTrailingSlash(
+  import.meta.env.VITE_DASHBOARD_API_ROOT ?? "http://10.247.225.41:8000/"
+);
+
 const VEHICLES_ENDPOINT = "api/vehicles/";
 
 export const vehicleService = {
-  // SERVER_IP: import.meta.env.VITE_SERVER_IP ?? "http://10.147.17.17:8002/",
   SERVER_IP: DEFAULT_SERVER_IP,
   BASE_URL: DEFAULT_SERVER_IP + VEHICLES_ENDPOINT,
   ZEROTIER_IP: import.meta.env.VITE_ZEROTIER_IP,
