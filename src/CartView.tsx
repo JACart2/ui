@@ -284,7 +284,7 @@ export default function CartView() {
           is_navigating: true,
           reached_destination: false,
         }));
-          
+    try {
         await vehicleService.updateTrip(
           import.meta.env.VITE_CART_NAME ?? "james",
           {
@@ -293,6 +293,9 @@ export default function CartView() {
             tripProgress: 0,
           }
         );
+    } catch(err) {
+        console.error("[Dashboard] Failed to update trip info:", err);
+    }
         navigateToLocation(selectedLocation);
       }
       setIsConfirmationModalOpen(false);
