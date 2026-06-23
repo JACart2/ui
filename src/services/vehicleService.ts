@@ -60,4 +60,23 @@ export const vehicleService = {
 
     return res.json();
   },
+
+  async updateTrip(
+    name: string,
+    data: {
+      startLocation?: string;
+      endLocation?: string;
+      tripProgress?: number;
+    }
+  ) {
+    const res = await fetch(this.BASE_URL + encodeURIComponent(name) + "/", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  
+    return res.json();
+  },
 };
