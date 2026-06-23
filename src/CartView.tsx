@@ -270,6 +270,8 @@ export default function CartView() {
     };
 
     const handleConfirmation = async () => {
+        console.log("[Trip Debug] handleConfirmation triggered");
+        console.log("[Trip Debug] selectedLocation:", selectedLocation);
       if (selectedLocation) {
         anomalyLoggingService.logTripStart({
           source: pendingCommandSource,
