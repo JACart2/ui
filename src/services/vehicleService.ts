@@ -72,16 +72,21 @@ export const vehicleService = {
       tripProgress?: number;
     }
   ) {
-    const res = await fetch(
-      `${API_ROOT}vehicles/${encodeURIComponent(name)}/`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      }
-    );
+    const url = `${this.BASE_URL}${encodeURIComponent(name)}/`;
+  
+    console.log("[Dashboard] Updating trip:", url, data);
+  
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  
+    if (!res.ok) {
+      throw new Error(`Dashboard trip update failed: ${res.status} ${res.statusText}`);
+    }
   
     return res.json();
   }
