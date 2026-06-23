@@ -10,6 +10,9 @@ const DEFAULT_SERVER_IP = withTrailingSlash(
   import.meta.env.VITE_DASHBOARD_API_ROOT ?? "http://10.247.225.41:8000/"
 );
 
+const CART_NAME =
+  import.meta.env.VITE_CART_NAME ?? "james";
+
 const VEHICLES_ENDPOINT = "api/vehicles/";
 
 export const vehicleService = {
@@ -69,14 +72,17 @@ export const vehicleService = {
       tripProgress?: number;
     }
   ) {
-    const res = await fetch(this.BASE_URL + encodeURIComponent(name) + "/", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+    const res = await fetch(
+      `${API_ROOT}vehicles/${encodeURIComponent(name)}/`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }
+    );
   
     return res.json();
-  },
+  }
 };
