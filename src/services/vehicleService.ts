@@ -73,7 +73,12 @@ export const vehicleService = {
     }
   ) {
     const url = `${this.BASE_URL}${encodeURIComponent(name)}/`;
-  
+    console.log("[Dashboard Debug] import.meta.env:", import.meta.env);
+    console.log("[Dashboard Debug] SERVER_IP:", this.SERVER_IP);
+    console.log("[Dashboard Debug] BASE_URL:", this.BASE_URL);
+    console.log("[Dashboard Debug] cart name:", name);
+    console.log("[Dashboard Debug] update URL:", url);
+    console.log("[Dashboard Debug] update data:", data);
     console.log("[Dashboard] Updating trip:", url, data);
   
     const res = await fetch(url, {
