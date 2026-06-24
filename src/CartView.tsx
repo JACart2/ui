@@ -269,9 +269,7 @@ export default function CartView() {
         speak(`Confirm to go to ${location.name}`);
     };
 
-    const handleConfirmation = async () => {
-        console.log("[Trip Debug] handleConfirmation triggered");
-        console.log("[Trip Debug] selectedLocation:", selectedLocation);
+    const handleConfirmation = () => {
       if (selectedLocation) {
         anomalyLoggingService.logTripStart({
           source: pendingCommandSource,
@@ -286,20 +284,21 @@ export default function CartView() {
           is_navigating: true,
           reached_destination: false,
         }));
-    try {
-        await vehicleService.updateTrip(
+    
+        vehicleService.updateTrip(
           import.meta.env.VITE_CART_NAME ?? "james",
           {
             startLocation: "Current location",
             endLocation: selectedLocation.displayName,
             tripProgress: 0,
           }
-        );
-    } catch(err) {
-        console.error("[Dashboard] Failed to update trip info:", err);
-    }
+        ).catch((err) => {
+          console.warn("[Dashboard] Trip update failed, continuing navigation:", err);
+        });
+    
         navigateToLocation(selectedLocation);
       }
+    
       setIsConfirmationModalOpen(false);
     };
 
