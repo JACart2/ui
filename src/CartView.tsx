@@ -389,11 +389,23 @@ export default function CartView() {
             speak("Stop failed");
         }
     };
+    
+    const CART_NAME = import.meta.env.VITE_CART_NAME ?? "james";
+
     // Sends an alert to the remote dashboard.
     const requestHelp = () => {
-        vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
-        speak("Help requested");
-    }
+        const nextHelpRequested = !helpRequested;
+
+        console.log("HELP_DEBUG UI help cart:", CART_NAME);
+        console.log("HELP_DEBUG UI next helpRequested:", nextHelpRequested);
+
+        vehicleService
+            .requestHelp(CART_NAME, nextHelpRequested)
+            .then(res => setHelpRequested(res.helpRequested))
+            .catch(err => console.error("[Help Requested] failed:", err));
+
+        speak(nextHelpRequested ? "Help requested" : "Help request cleared");
+    };
 
     /**
      * Processes voice commands received from the VoiceCommands component.

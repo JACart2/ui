@@ -51,15 +51,28 @@ export const vehicleService = {
     name: string,
     helpRequested?: boolean
   ): Promise<{ helpRequested: boolean }> {
-    const res = await fetch(this.BASE_URL + name + "/toggle-help", {
+    const url = `${this.BASE_URL}${encodeURIComponent(name)}/toggle-help`;
+
+    console.log("HELP_DEBUG UI requestHelp name:", name);
+    console.log("HELP_DEBUG UI requestHelp url:", url);
+    console.log("HELP_DEBUG UI requestHelp body:", { helpRequested });
+
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        helpRequested: helpRequested,
+        helpRequested,
       }),
     });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(
+        `Help request failed: ${res.status} ${res.statusText}: ${body}`
+      );
+    }
 
     return res.json();
   },
