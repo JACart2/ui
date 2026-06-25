@@ -395,10 +395,6 @@ export default function CartView() {
     // Sends an alert to the remote dashboard.
     const requestHelp = () => {
         const nextHelpRequested = !helpRequested;
-
-        console.log("HELP_DEBUG UI help cart:", CART_NAME);
-        console.log("HELP_DEBUG UI next helpRequested:", nextHelpRequested);
-
         vehicleService
             .requestHelp(CART_NAME, nextHelpRequested)
             .then(res => setHelpRequested(res.helpRequested))
