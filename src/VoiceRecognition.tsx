@@ -45,6 +45,7 @@ interface VoiceCommandsProps {
  * @param {VoiceCommandsProps} props - Component properties
  * @returns {JSX.Element} Voice command interface component
  */
+
 const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     const commandList = [
         { name: "stop", action: "STOP" },
@@ -55,6 +56,10 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         { name: "cancel", action: "CANCEL" },
     ];
 
+    const cartName = import.meta.env.VITE_CART_NAME || "james";
+    const wakeWord = cartName.trim().toLowerCase();
+    const wakeWordDisplay = cartName.trim();
+    
     // Track last published transcript to avoid duplicates
     const lastPublishedTranscript = useRef<string>("");
 
@@ -66,7 +71,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     } = useSpeechRecognition({
         commands: [
             {
-                command: "James *",
+                command: `${wakeWordDisplay} *`,
                 callback: (spokenCommand: string) => {
                     console.log("Raw command received:", spokenCommand);
 
@@ -203,8 +208,8 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         if (transcript) {
             const trimmedTranscript = transcript.trim().toLowerCase();
 
-            // If the transcript doesn't start with "james", reset it immediately
-            if (!trimmedTranscript.startsWith('james')) {
+            // If the transcript doesn't start with the wakeWord, reset it immediately
+            if (!trimmedTranscript.startsWith(wakeWord)) {
                 resetTranscript();
                 return;
             }
@@ -230,7 +235,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         <div>
             {listening && (
                 <div style={{ color: 'red', textAlign: 'center', marginTop: '10px' }}>
-                    🔴 Listening for Voice Commands...
+                    🔴 Listening for "{wakeWordDisplay}" Voice Commands...
                 </div>
             )}
             {!browserSupportsSpeechRecognition && (
