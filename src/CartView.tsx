@@ -270,18 +270,36 @@ export default function CartView() {
     };
 
     const handleConfirmation = () => {
-        if (selectedLocation) {
-            anomalyLoggingService.logTripStart({
-                source: pendingCommandSource,
-                destination: selectedLocation.displayName,
-                startMethod: pendingCommandSource === "voice" ? "VOICE_CONFIRM" : "UI_CONFIRM",
-            });
-
-            speak(`Now navigating to ${selectedLocation.name}`);
-            setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
-            navigateToLocation(selectedLocation);
-        }
-        setIsConfirmationModalOpen(false);
+      if (selectedLocation) {
+        anomalyLoggingService.logTripStart({
+          source: pendingCommandSource,
+          destination: selectedLocation.displayName,
+          startMethod: pendingCommandSource === "voice" ? "VOICE_CONFIRM" : "UI_CONFIRM",
+        });
+    
+        speak(`Now navigating to ${selectedLocation.name}`);
+    
+        setState(prev => ({
+          ...prev,
+          is_navigating: true,
+          reached_destination: false,
+        }));
+    
+        vehicleService.updateTrip(
+          import.meta.env.VITE_CART_NAME ?? "james",
+          {
+            startLocation: "Current location",
+            endLocation: selectedLocation.displayName,
+            tripProgress: 0,
+          }
+        ).catch((err) => {
+          console.warn("[Dashboard] Trip update failed, continuing navigation:", err);
+        });
+    
+        navigateToLocation(selectedLocation);
+      }
+    
+      setIsConfirmationModalOpen(false);
     };
 
     const handleConfirmationCancel = () => {
@@ -371,11 +389,19 @@ export default function CartView() {
             speak("Stop failed");
         }
     };
+    
+    const CART_NAME = import.meta.env.VITE_CART_NAME ?? "james";
+
     // Sends an alert to the remote dashboard.
     const requestHelp = () => {
-        vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
-        speak("Help requested");
-    }
+        const nextHelpRequested = !helpRequested;
+        vehicleService
+            .requestHelp(CART_NAME, nextHelpRequested)
+            .then(res => setHelpRequested(res.helpRequested))
+            .catch(err => console.error("[Help Requested] failed:", err));
+
+        speak(nextHelpRequested ? "Help requested" : "Help request cleared");
+    };
 
     /**
      * Processes voice commands received from the VoiceCommands component.
@@ -661,15 +687,36 @@ export default function CartView() {
                 },
             });
             let visual_path_coordinates: number[][] = [];
-
+            
             visual_path.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
-
+            
                 const markers = message as ROSMarkerList;
-                console.log("visual_path Message:")
-                console.log(message)
-                visual_path_coordinates = markers.markers.map((m) => rosToMapCoords(m.pose.position));
-                const source = map.current.getSource("visual_path") as GeoJSONSource;
+            
+                console.log("visual_path Message:");
+                console.log(message);
+            
+                const nextCoordinates = markers.markers
+                    .map((m) => rosToMapCoords(m.pose.position))
+                    .filter((coord) => coord != undefined && coord.length === 2);
+            
+                console.log("[visual_path] point count:", nextCoordinates.length);
+            
+                // Ignore empty path updates so the old visible route does not flicker/disappear.
+                if (nextCoordinates.length === 0) {
+                    console.warn("[visual_path] Ignoring empty path update");
+                    return;
+                }
+            
+                visual_path_coordinates = nextCoordinates;
+            
+                const source = map.current.getSource("visual_path") as GeoJSONSource | undefined;
+            
+                if (!source) {
+                    console.warn("[visual_path] Source not ready yet");
+                    return;
+                }
+            
                 source.setData(LineString(visual_path_coordinates));
             });
 

@@ -1,13 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 console.log(import.meta.env);
 
-// const DEFAULT_SERVER_IP =
-//   import.meta.env.VITE_SERVER_IP ?? "http://10.147.17.17:8002/";
-const DEFAULT_SERVER_IP = "https://35.153.174.48/";
+/* http://10.247.225.41:8000/ is the fallback*/
+function withTrailingSlash(url: string) {
+  return url.endsWith("/") ? url : `${url}/`;
+}
+
+const DEFAULT_SERVER_IP = withTrailingSlash(
+  import.meta.env.VITE_DASHBOARD_API_ROOT ?? "http://10.247.225.41:8000/"
+);
+
+const CART_NAME =
+  import.meta.env.VITE_CART_NAME ?? "james";
+
 const VEHICLES_ENDPOINT = "api/vehicles/";
 
 export const vehicleService = {
-  // SERVER_IP: import.meta.env.VITE_SERVER_IP ?? "http://10.147.17.17:8002/",
   SERVER_IP: DEFAULT_SERVER_IP,
   BASE_URL: DEFAULT_SERVER_IP + VEHICLES_ENDPOINT,
   ZEROTIER_IP: import.meta.env.VITE_ZEROTIER_IP,
@@ -43,16 +51,55 @@ export const vehicleService = {
     name: string,
     helpRequested?: boolean
   ): Promise<{ helpRequested: boolean }> {
-    const res = await fetch(this.BASE_URL + name + "/toggle-help", {
+    const url = `${this.BASE_URL}${encodeURIComponent(name)}/toggle-help`;
+
+    console.log("HELP_DEBUG UI requestHelp name:", name);
+    console.log("HELP_DEBUG UI requestHelp url:", url);
+    console.log("HELP_DEBUG UI requestHelp body:", { helpRequested });
+
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        helpRequested: helpRequested,
+        helpRequested,
       }),
     });
 
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(
+        `Help request failed: ${res.status} ${res.statusText}: ${body}`
+      );
+    }
+
     return res.json();
   },
+
+  async updateTrip(
+    name: string,
+    data: {
+      startLocation?: string;
+      endLocation?: string;
+      tripProgress?: number;
+    }
+  ) {
+    const url = `${this.BASE_URL}${encodeURIComponent(name)}/`;
+    console.log("[Dashboard] Updating trip:", url, data);
+  
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  
+    if (!res.ok) {
+      throw new Error(`Dashboard trip update failed: ${res.status} ${res.statusText}`);
+    }
+  
+    return res.json();
+  }
 };
