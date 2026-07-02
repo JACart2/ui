@@ -5,7 +5,7 @@ import maplibregl, { GeoJSONSource, Marker, Popup } from "maplibre-gl";
 import GeoJSON, { Position } from "geojson";
 type GeoJSON = GeoJSON.GeoJSON;
 import * as ROSLIB from "roslib";
-import { ros, clicked_point, vehicle_state, visual_path, limited_pose, left_image, stop_topic, nav_cmd, brake_cmd } from "./topics";
+import { ros, clicked_point, vehicle_state, visual_path, limited_pose, rear_image, front_image, stop_topic, nav_cmd, brake_cmd } from "./topics";
 import { Image, ROSMarkerList } from "./MessageTypes";
 import { rosToMapCoords, lngLatToMapCoords } from "./transform";
 import locations from "./locations.json";
@@ -51,8 +51,10 @@ export default function CartView() {
     const { speak } = useTTS();
     const stopIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [pendingCommandSource, setPendingCommandSource] = useState<CommandSource>("touch");
-    const lastDashboardCameraPublish = useRef(0);
-    
+    const lastDashboardCameraPublish = useRef({
+        front: 0,
+        rear: 0,
+    });
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
         reached_destination: true,
@@ -722,11 +724,26 @@ export default function CartView() {
                 source.setData(LineString(visual_path_coordinates));
             });
 
-            console.log("[Camera] subscribing to front raw image topic:", left_image.name);
+            console.log("[Camera] subscribing to front compressed image topic:", front_image.name);
 
-            left_image.subscribe((message: ROSLIB.Message) => {
-                console.log("[Camera] front raw image received");
-                handle_image_data(message);
+            front_image.subscribe((message: ROSLIB.Message) => {
+                console.log("[Camera] front compressed image received");
+
+                handleCompressedImageData(
+                    message as unknown as { format?: string; data: string | number[] },
+                    "front"
+                );
+            });
+
+            console.log("[Camera] subscribing to rear compressed image topic:", rear_image.name);
+
+            rear_image.subscribe((message: ROSLIB.Message) => {
+                console.log("[Camera] rear compressed image received");
+
+                handleCompressedImageData(
+                    message as unknown as { format?: string; data: string | number[] },
+                    "rear"
+                );
             });
 
             function uint8ArrayToBase64(bytes: number[]) {
@@ -742,10 +759,10 @@ export default function CartView() {
             }
 
             function handleCompressedImageData(
-                image: { format?: string; data: number[] },
+                image: { format?: string; data: string | number[] },
                 camera: "front" | "rear" = "front"
             ) {
-                if (!image?.data?.length) {
+                if (!image?.data || image.data.length === 0) {
                     console.warn("[Camera] Empty compressed image received");
                     return;
                 }
@@ -753,6 +770,8 @@ export default function CartView() {
                 console.log("[Camera] Compressed image received:", {
                     camera,
                     format: image.format,
+                    dataType: typeof image.data,
+                    isArray: Array.isArray(image.data),
                     length: image.data.length,
                 });
 
@@ -760,11 +779,21 @@ export default function CartView() {
                     ? "png"
                     : "jpeg";
 
-                const base64Image = `data:image/${format};base64,${uint8ArrayToBase64(
-                    image.data
-                )}`;
+                let base64Data: string;
 
-                const img = document.getElementById("camera-image") as HTMLImageElement | null;
+                // ROSBridge commonly sends uint8[] fields as base64 strings.
+                if (typeof image.data === "string") {
+                    base64Data = image.data;
+                } else {
+                    base64Data = uint8ArrayToBase64(image.data);
+                }
+
+                const base64Image = `data:image/${format};base64,${base64Data}`;
+
+                console.log("[Camera] base64 image preview:", base64Image.slice(0, 40));
+
+                const imgId = camera === "front" ? "front-camera-image" : "rear-camera-image";
+                const img = document.getElementById(imgId) as HTMLImageElement | null;
 
                 if (img) {
                     img.src = base64Image;
@@ -772,9 +801,9 @@ export default function CartView() {
 
                 const now = Date.now();
 
-                if (now - lastDashboardCameraPublish.current >= 1000) {
+                if (now - lastDashboardCameraPublish.current[camera] >= 1000) {
                     dashboardSocket.publishCameraFrame(CART_NAME, camera, base64Image);
-                    lastDashboardCameraPublish.current = now;
+                    lastDashboardCameraPublish.current[camera] = now;
                 }
             }
             
@@ -951,7 +980,8 @@ export default function CartView() {
         >
             <div id="split">
                 <div id="sidebar">
-                    <img id="camera-image"></img>
+                    <img id="front-camera-image" />
+                    <img id="rear-camera-image" />
                     <h2>Destinations</h2>
                     <ul id="destinations">
                         {locations.map((location, index) => (

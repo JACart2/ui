@@ -121,10 +121,17 @@ export const right_video = new ROSLIB.Topic({
   messageType: "sensor_msgs/msg/Image",
 });
 
-export const left_image = new ROSLIB.Topic({
+export const front_image = new ROSLIB.Topic({
   ros,
-  name: "/zed_front/zed_node_0/rgb/color/rect/image",
-  messageType: "sensor_msgs/msg/Image",
+  name: "/zed_front/zed_node_0/rgb/color/rect/image/compressed",
+  messageType: "sensor_msgs/msg/CompressedImage",
+  throttle_rate: 1000,
+});
+
+export const rear_image = new ROSLIB.Topic({
+  ros,
+  name: "/zed_rear/zed_node_1/rgb/color/rect/image/compressed",
+  messageType: "sensor_msgs/msg/CompressedImage",
   throttle_rate: 1000,
 });
 
