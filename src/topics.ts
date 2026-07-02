@@ -123,9 +123,9 @@ export const right_video = new ROSLIB.Topic({
 
 export const left_image = new ROSLIB.Topic({
   ros,
-  name: "/zed/zed_node/rgb/image_rect_color",
+  name: "/zed_front/zed_node_0/rgb/color/rect/image",
   messageType: "sensor_msgs/msg/Image",
-  throttle_rate: 150,
+  throttle_rate: 1000,
 });
 
 export const stop_topic = new ROSLIB.Topic({

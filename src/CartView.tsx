@@ -21,6 +21,7 @@ import VoiceCommands from "./VoiceRecognition";
 import { useTTS } from './useTTS';
 import { vehicleService } from "./services/vehicleService";
 import { anomalyLoggingService } from "./services/anomalyLoggingService";
+import { dashboardSocket } from "./services/dashboardSocket";
 
 type CommandSource = "voice" | "touch";
 
@@ -50,7 +51,8 @@ export default function CartView() {
     const { speak } = useTTS();
     const stopIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [pendingCommandSource, setPendingCommandSource] = useState<CommandSource>("touch");
-
+    const lastDashboardCameraPublish = useRef(0);
+    
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
         reached_destination: true,
@@ -720,54 +722,153 @@ export default function CartView() {
                 source.setData(LineString(visual_path_coordinates));
             });
 
+            console.log("[Camera] subscribing to front raw image topic:", left_image.name);
+
             left_image.subscribe((message: ROSLIB.Message) => {
-                // console.log(message)
+                console.log("[Camera] front raw image received");
                 handle_image_data(message);
             });
 
+            function uint8ArrayToBase64(bytes: number[]) {
+                const chunkSize = 0x8000;
+                let binary = "";
+
+                for (let i = 0; i < bytes.length; i += chunkSize) {
+                    const chunk = bytes.slice(i, i + chunkSize);
+                    binary += String.fromCharCode(...chunk);
+                }
+
+                return btoa(binary);
+            }
+
+            function handleCompressedImageData(
+                image: { format?: string; data: number[] },
+                camera: "front" | "rear" = "front"
+            ) {
+                if (!image?.data?.length) {
+                    console.warn("[Camera] Empty compressed image received");
+                    return;
+                }
+
+                console.log("[Camera] Compressed image received:", {
+                    camera,
+                    format: image.format,
+                    length: image.data.length,
+                });
+
+                const format = image.format?.toLowerCase().includes("png")
+                    ? "png"
+                    : "jpeg";
+
+                const base64Image = `data:image/${format};base64,${uint8ArrayToBase64(
+                    image.data
+                )}`;
+
+                const img = document.getElementById("camera-image") as HTMLImageElement | null;
+
+                if (img) {
+                    img.src = base64Image;
+                }
+
+                const now = Date.now();
+
+                if (now - lastDashboardCameraPublish.current >= 1000) {
+                    dashboardSocket.publishCameraFrame(CART_NAME, camera, base64Image);
+                    lastDashboardCameraPublish.current = now;
+                }
+            }
+            
             function handle_image_data(message: ROSLIB.Message) {
                 const image = message as Image;
-                const d = image.data;
 
-                const binaryData = atob(d); // Decode Base64 string into binary data
+                if (!image?.data) {
+                    console.warn("[Camera] Empty raw image received");
+                    return;
+                }
+
+                console.log("[Camera] Raw image received:", {
+                    width: image.width,
+                    height: image.height,
+                    encoding: image.encoding,
+                    dataLength: image.data.length,
+                });
+
+                const binaryData = atob(image.data);
 
                 const rawData = new Uint8Array(binaryData.length);
                 for (let i = 0; i < binaryData.length; i++) {
                     rawData[i] = binaryData.charCodeAt(i);
                 }
 
-                const width = 640;
-                const height = 360;
+                const width = image.width;
+                const height = image.height;
                 const rgbaData = new Uint8ClampedArray(width * height * 4);
+                const encoding = image.encoding?.toLowerCase();
 
-                for (let i = 0; i < rawData.length; i += 4) {
-                    const b = rawData[i];      // Blue
-                    const g = rawData[i + 1];  // Green
-                    const r = rawData[i + 2];  // Red
-                    const a = rawData[i + 3];  // Alpha
-
-                    rgbaData[i] = r;        // Red
-                    rgbaData[i + 1] = g;    // Green
-                    rgbaData[i + 2] = b;    // Blue
-                    rgbaData[i + 3] = a;    // Alpha
+                if (encoding === "rgb8") {
+                    for (let i = 0, j = 0; i < rawData.length && j < rgbaData.length; i += 3, j += 4) {
+                        rgbaData[j] = rawData[i];
+                        rgbaData[j + 1] = rawData[i + 1];
+                        rgbaData[j + 2] = rawData[i + 2];
+                        rgbaData[j + 3] = 255;
+                    }
+                } else if (encoding === "bgr8") {
+                    for (let i = 0, j = 0; i < rawData.length && j < rgbaData.length; i += 3, j += 4) {
+                        rgbaData[j] = rawData[i + 2];
+                        rgbaData[j + 1] = rawData[i + 1];
+                        rgbaData[j + 2] = rawData[i];
+                        rgbaData[j + 3] = 255;
+                    }
+                } else if (encoding === "rgba8") {
+                    for (let i = 0, j = 0; i < rawData.length && j < rgbaData.length; i += 4, j += 4) {
+                        rgbaData[j] = rawData[i];
+                        rgbaData[j + 1] = rawData[i + 1];
+                        rgbaData[j + 2] = rawData[i + 2];
+                        rgbaData[j + 3] = rawData[i + 3];
+                    }
+                } else if (encoding === "bgra8") {
+                    for (let i = 0, j = 0; i < rawData.length && j < rgbaData.length; i += 4, j += 4) {
+                        rgbaData[j] = rawData[i + 2];
+                        rgbaData[j + 1] = rawData[i + 1];
+                        rgbaData[j + 2] = rawData[i];
+                        rgbaData[j + 3] = rawData[i + 3];
+                    }
+                } else {
+                    console.warn("[Camera] Unsupported raw image encoding:", image.encoding);
+                    return;
                 }
 
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+
                 canvas.width = width;
                 canvas.height = height;
-                if (ctx) {
-                    const actualImageData = ctx.createImageData(width, height);
-                    actualImageData.data.set(rgbaData);
-                    ctx.putImageData(actualImageData, 0, 0);
-                    const base64Image = canvas.toDataURL("image/png");
 
-                    const img = document.getElementById("camera-image") as HTMLImageElement;
-                    img.src = base64Image
-                    img.width = image.width
-                    img.height = image.height
+                if (!ctx) {
+                    console.warn("[Camera] Could not create canvas context");
+                    return;
                 }
 
+                const actualImageData = ctx.createImageData(width, height);
+                actualImageData.data.set(rgbaData);
+                ctx.putImageData(actualImageData, 0, 0);
+
+                const base64Image = canvas.toDataURL("image/jpeg", 0.5);
+
+                const img = document.getElementById("camera-image") as HTMLImageElement | null;
+
+                if (img) {
+                    img.src = base64Image;
+                    img.width = width;
+                    img.height = height;
+                }
+
+                const now = Date.now();
+
+                if (now - lastDashboardCameraPublish.current >= 1000) {
+                    dashboardSocket.publishCameraFrame(CART_NAME, "front", base64Image);
+                    lastDashboardCameraPublish.current = now;
+                }
             }
 
             // Dynamically populate Destinations list with data from locations.json

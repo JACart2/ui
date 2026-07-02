@@ -24,6 +24,7 @@
     "react-router-dom": "^7.1.5",
     "regenerator-runtime": "^0.14.1",
     "roslib": "^1.4.1",
+    "socket.io-client": "^4.8.3",
     "vite": "^6.1.0"
   },
   "devDependencies": {
