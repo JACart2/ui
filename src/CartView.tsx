@@ -20,10 +20,15 @@ import DevMenu from "./ui/DevMenu";
 import VoiceCommands from "./VoiceRecognition";
 import { useTTS } from './useTTS';
 import { vehicleService } from "./services/vehicleService";
+
+//ai anomoly logging
+import { decisionLogService } from "./services/decisionLogService";
 import { anomalyLoggingService } from "./services/anomalyLoggingService";
 import { dashboardSocket } from "./services/dashboardSocket";
 
 type CommandSource = "voice" | "touch";
+
+const CART_NAME = import.meta.env.VITE_CART_NAME ?? "james";
 
 function LineString(coordinates: Position[]): GeoJSON {
     return {
@@ -62,25 +67,52 @@ export default function CartView() {
     });
 
     useEffect(() => {
-        const handleConnection = () => setRosConnected(true);
-        const handleClose = () => setRosConnected(false);
-        const handleError = () => setRosConnected(false);
-    
-        setRosConnected(ros.isConnected);
-    
+        const handleConnection = () => {
+            console.log("[ROS] connected");
+
+            setRosConnected(true);
+            decisionLogService.start(CART_NAME);
+        };
+
+        const handleClose = () => {
+            console.log("[ROS] disconnected");
+
+            setRosConnected(false);
+            decisionLogService.stop();
+        };
+
+        const handleError = (error: unknown) => {
+            console.error("[ROS] connection error:", error);
+
+            setRosConnected(false);
+            decisionLogService.stop();
+        };
+
         ros.on("connection", handleConnection);
         ros.on("close", handleClose);
         ros.on("error", handleError);
-    
+
+        /*
+        * The ROS connection may have completed before CartView mounted.
+        * Start the service immediately in that case.
+        */
+        if (ros.isConnected) {
+            handleConnection();
+        } else {
+            setRosConnected(false);
+        }
+
         const interval = window.setInterval(() => {
             setRosConnected(ros.isConnected);
         }, 1000);
-    
+
         return () => {
             ros.off("connection", handleConnection);
             ros.off("close", handleClose);
             ros.off("error", handleError);
+
             window.clearInterval(interval);
+            decisionLogService.stop();
         };
     }, []);
     
@@ -393,8 +425,6 @@ export default function CartView() {
             speak("Stop failed");
         }
     };
-    
-    const CART_NAME = import.meta.env.VITE_CART_NAME ?? "james";
 
     // Sends an alert to the remote dashboard.
     const requestHelp = () => {

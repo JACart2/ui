@@ -3,13 +3,16 @@ import io from "socket.io-client";
 const DASHBOARD_ROOT =
   import.meta.env.VITE_DASHBOARD_API_ROOT || "https://10.247.225.41:8000/";
 
-console.log("[Dashboard Socket] connecting to:", DASHBOARD_ROOT.replace(/\/$/, ""));
+console.log(
+  "[Dashboard Socket] connecting to:",
+  DASHBOARD_ROOT.replace(/\/$/, ""),
+);
 
 const socket = io(DASHBOARD_ROOT.replace(/\/$/, ""), {
   transports: ["polling"],
 });
 
-function normalizeCartName(name: string) {
+function normalizeCartName(name: string): string {
   return name.trim().toLowerCase();
 }
 
@@ -21,30 +24,67 @@ socket.on("disconnect", (reason: string) => {
   console.log("[Dashboard Socket] disconnected:", reason);
 });
 
-socket.on("reconnect_attempt", (attempt: number) => {
-  console.log("[Dashboard Socket] reconnect_attempt:", attempt);
+socket.io.on("reconnect_attempt", (attempt: number) => {
+  console.log(
+    "[Dashboard Socket] reconnect_attempt:",
+    attempt,
+  );
 });
 
 socket.on("connect_error", (error: Error) => {
-  console.error("[Dashboard Socket] connect_error:", error.message, error);
+  console.error(
+    "[Dashboard Socket] connect_error:",
+    error.message,
+    error,
+  );
 });
 
 type CameraName = "front" | "rear";
 
+export interface DashboardDecisionLog {
+  cartName: string;
+  timestamp: string;
+  severity: string;
+  source: string;
+  message: string;
+  raw?: unknown;
+}
+
 export const dashboardSocket = {
-  publishCameraFrame(cartName: string, camera: CameraName, imageData: string) {
+  publishCameraFrame(
+    cartName: string,
+    camera: CameraName,
+    imageData: string,
+  ): void {
     const name = normalizeCartName(cartName);
 
-    console.log("[Dashboard Socket] publishing camera-frame:", {
-      name,
-      camera,
-      length: imageData.length,
-    });
+    console.log(
+      "[Dashboard Socket] publishing camera-frame:",
+      {
+        name,
+        camera,
+        length: imageData.length,
+      },
+    );
 
     socket.emit("camera-frame", {
       name,
       camera,
       data: imageData,
     });
+  },
+
+  publishDecisionLog(log: DashboardDecisionLog): void {
+    const normalizedLog: DashboardDecisionLog = {
+      ...log,
+      cartName: normalizeCartName(log.cartName),
+    };
+
+    console.log(
+      "[Dashboard Socket] publishing decision-log:",
+      normalizedLog,
+    );
+
+    socket.emit("decision-log", normalizedLog);
   },
 };
