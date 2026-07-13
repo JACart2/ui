@@ -157,7 +157,7 @@ export const brake_cmd = new ROSLIB.Topic({
 export const ai_anomaly_logging = new ROSLIB.Topic({
   ros,
   name: "/ai_anomaly_logging",
-  messageType: "std_msgs/String",
+  messageType: "anomaly_msg/msg/AnomalyMsg",
 });
 
 export const add_decisions = new ROSLIB.Topic({
