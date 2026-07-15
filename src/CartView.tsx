@@ -25,6 +25,7 @@ import { vehicleService } from "./services/vehicleService";
 import { decisionLogService } from "./services/decisionLogService";
 import { anomalyLoggingService } from "./services/anomalyLoggingService";
 import { dashboardSocket } from "./services/dashboardSocket";
+import { aiLogForwarder } from "./services/aiLogForwarder";
 
 type CommandSource = "voice" | "touch";
 
@@ -71,6 +72,7 @@ export default function CartView() {
             console.log("[ROS] connected");
 
             setRosConnected(true);
+            aiLogForwarder.start(CART_NAME);
             decisionLogService.start(CART_NAME);
         };
 
@@ -78,6 +80,7 @@ export default function CartView() {
             console.log("[ROS] disconnected");
 
             setRosConnected(false);
+            aiLogForwarder.stop();
             decisionLogService.stop();
         };
 
@@ -85,6 +88,7 @@ export default function CartView() {
             console.error("[ROS] connection error:", error);
 
             setRosConnected(false);
+            aiLogForwarder.stop();
             decisionLogService.stop();
         };
 
@@ -112,6 +116,7 @@ export default function CartView() {
             ros.off("error", handleError);
 
             window.clearInterval(interval);
+            aiLogForwarder.stop();
             decisionLogService.stop();
         };
     }, []);
