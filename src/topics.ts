@@ -55,7 +55,6 @@ export function disconnectFromRos() {
 
 ros.on("connection", () => {
   console.log("Connected to ROS");
-  console.log("Available ROS message types:", ros.messageTypes); // Log all available message types
 
   isConnecting = false;
 
@@ -160,8 +159,27 @@ export const ai_anomaly_logging = new ROSLIB.Topic({
   messageType: "anomaly_msg/msg/AnomalyMsg",
 });
 
+
 export const add_decisions = new ROSLIB.Topic({
   ros,
   name: "/add/decisions",
   messageType: "std_msgs/String",
+});
+
+export const gps_request = new ROSLIB.Topic({
+  ros,
+  name: "/gps_request",
+  messageType: "navigation_interface/msg/LatLongPoint",
+});
+
+export const gps_send = new ROSLIB.Topic({
+  ros,
+  name: "/gps_send",
+  messageType: "navigation_interface/msg/LatLongPoint",
+});
+
+export const gps_global_path = new ROSLIB.Topic({
+  ros,
+  name: "/gps_global_path",
+  messageType: "navigation_interface/msg/LatLongArray",
 });

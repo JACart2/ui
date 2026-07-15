@@ -1,15 +1,26 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./styles/CartView.css";
 import { Protocol } from "pmtiles";
-import maplibregl, { GeoJSONSource, Marker, Popup } from "maplibre-gl";
+import maplibregl, { GeoJSONSource, Marker, Popup, Map as MapLibreMap } from "maplibre-gl";
 import GeoJSON, { Position } from "geojson";
 type GeoJSON = GeoJSON.GeoJSON;
 import * as ROSLIB from "roslib";
-import { ros, clicked_point, vehicle_state, visual_path, limited_pose, rear_image, front_image, stop_topic, nav_cmd, brake_cmd } from "./topics";
-import { Image, ROSMarkerList } from "./MessageTypes";
-import { rosToMapCoords, lngLatToMapCoords } from "./transform";
+
+import {
+    ros,
+    gps_request,
+    gps_send,
+    gps_global_path,
+    vehicle_state,
+    rear_image,
+    front_image,
+    stop_topic,
+    nav_cmd,
+    brake_cmd,
+} from "./topics";
+import { Image } from "./MessageTypes";
 import locations from "./locations.json";
-import { PoseWithCovarianceStamped, VehicleState } from "./MessageTypes";
+import { VehicleState } from "./MessageTypes";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { useSpeechRecognition } from 'react-speech-recognition';
@@ -44,7 +55,7 @@ function LineString(coordinates: Position[]): GeoJSON {
 
 
 export default function CartView() {
-    const map = useRef<maplibregl.Map | null>(null);
+    const map = useRef<MapLibreMap | null>(null);
     const mapRef = useRef(null);
     const [currentLocation, setCurrentLocation] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -573,38 +584,28 @@ export default function CartView() {
     }, []);
 
     function navigateTo(lat: number, lng: number) {
-      if (!ros.isConnected) {
-        console.error("Cannot publish destination: ROS is not connected");
-        message.error("Cannot navigate: ROS is not connected");
-        return;
-      }
-    
-      console.log(`Target Coordinates: ${lat}, ${lng}`);
-    
-      const [x, y] = lngLatToMapCoords({ lat, lng });
-    
-      const target = new ROSLIB.Message({
-        header: {
-          stamp: {
-            sec: 0,
-            nanosec: 0,
-          },
-          frame_id: "map",
-        },
-        point: {
-          x,
-          y,
-          z: 0,
-        },
-      });
-    
-      console.log("Publishing /clicked_point:", target);
-      clicked_point.publish(target);
+
+        if (!ros.isConnected) {
+            console.error("Cannot publish destination: ROS is not connected");
+            message.error("Cannot navigate: ROS is not connected");
+            return;
+        }
+
+        console.log(`Publishing GPS destination: ${lat}, ${lng}`);
+
+        const target = new ROSLIB.Message({
+            latitude: lat,
+            longitude: lng,
+        });
+
+        console.log("Publishing /gps_request:", target);
+        gps_request.publish(target);
     }
     function navigateToLocation(location: { lat: number, long: number, name: string, displayName: string }) {
         console.log("Navigating to: " + location.displayName);
         setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
         setCurrentLocation(location.displayName);
+
         navigateTo(location.lat, location.long);
     }
 
@@ -726,36 +727,58 @@ export default function CartView() {
                 },
             });
             let visual_path_coordinates: number[][] = [];
-            
-            visual_path.subscribe((message: ROSLIB.Message) => {
+
+            gps_global_path.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
-            
-                const markers = message as ROSMarkerList;
-            
-                console.log("visual_path Message:");
+
+                const gpsPath = message as unknown as {
+                    gpspoints?: Array<{
+                        latitude: number;
+                        longitude: number;
+                        elevation?: number;
+                    }>;
+                };
+
+                console.log("gps_global_path Message:");
                 console.log(message);
-            
-                const nextCoordinates = markers.markers
-                    .map((m) => rosToMapCoords(m.pose.position))
-                    .filter((coord) => coord != undefined && coord.length === 2);
-            
-                console.log("[visual_path] point count:", nextCoordinates.length);
-            
-                // Ignore empty path updates so the old visible route does not flicker/disappear.
+
+                // MapLibre/GeoJSON expects [longitude, latitude].
+                const nextCoordinates: number[][] = (gpsPath.gpspoints ?? [])
+                    .map((gpsPoint) => [
+                        gpsPoint.longitude,
+                        gpsPoint.latitude,
+                    ])
+                    .filter(
+                        ([longitude, latitude]) =>
+                            Number.isFinite(longitude) &&
+                            Number.isFinite(latitude)
+                    );
+
+                console.log(
+                    "[gps_global_path] point count:",
+                    nextCoordinates.length
+                );
+
+                // Ignore empty path updates so the route does not flicker.
                 if (nextCoordinates.length === 0) {
-                    console.warn("[visual_path] Ignoring empty path update");
+                    console.warn(
+                        "[gps_global_path] Ignoring empty path update"
+                    );
                     return;
                 }
-            
+
                 visual_path_coordinates = nextCoordinates;
-            
-                const source = map.current.getSource("visual_path") as GeoJSONSource | undefined;
-            
+
+                const source = map.current.getSource(
+                    "visual_path"
+                ) as GeoJSONSource | undefined;
+
                 if (!source) {
-                    console.warn("[visual_path] Source not ready yet");
+                    console.warn(
+                        "[gps_global_path] Source not ready yet"
+                    );
                     return;
                 }
-            
                 source.setData(LineString(visual_path_coordinates));
             });
 
@@ -954,7 +977,7 @@ export default function CartView() {
                     .addTo(map.current);
 
                 marker.togglePopup();
-                marker.getElement().addEventListener('click', (e) => {
+                marker.getElement().addEventListener('click', (e: MouseEvent) => {
                     e.stopPropagation();
                     console.log('Marker clicked:', location.displayName);
                     handleLocationSelect(location);
@@ -964,11 +987,15 @@ export default function CartView() {
             });
 
 
-            limited_pose.subscribe(function (message: ROSLIB.Message) {
+            gps_send.subscribe(function (message: ROSLIB.Message) {
                 if (map.current == undefined) return;
 
-                const poseWithCovariance = message as PoseWithCovarianceStamped;
-                const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.pose.position);
+                const gpsPoint = message as unknown as {
+                    latitude: number;
+                    longitude: number;
+                };
+                const x1 = gpsPoint.longitude;
+                const y1 = gpsPoint.latitude;
                 const source = map.current.getSource("limited_pose") as GeoJSONSource;
                 source.setData(point(x1, y1));
 
