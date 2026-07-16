@@ -41,14 +41,6 @@ socket.on("connect_error", (error: Error) => {
 
 type CameraName = "front" | "rear";
 
-export interface DashboardDecisionLog {
-  cartName: string;
-  timestamp: string;
-  severity: string;
-  source: string;
-  message: string;
-  raw?: unknown;
-}
 
 export const dashboardSocket = {
   publishCameraFrame(
@@ -72,19 +64,5 @@ export const dashboardSocket = {
       camera,
       data: imageData,
     });
-  },
-
-  publishDecisionLog(log: DashboardDecisionLog): void {
-    const normalizedLog: DashboardDecisionLog = {
-      ...log,
-      cartName: normalizeCartName(log.cartName),
-    };
-
-    console.log(
-      "[Dashboard Socket] publishing decision-log:",
-      normalizedLog,
-    );
-
-    socket.emit("decision-log", normalizedLog);
   },
 };

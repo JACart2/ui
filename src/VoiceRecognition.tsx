@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { message } from "antd";
 import Fuse from 'fuse.js';
-import { publishSpeechToAnomalyTopic } from "./anomalyPublisher";
+import { anomalyLoggingService } from "./services/anomalyLoggingService";
 
 interface VoiceCommandsProps {
     onCommand: (command: string) => void;
@@ -15,7 +15,7 @@ interface VoiceCommandsProps {
 * Lines 158-164: New UseEffect hook that publishes every transcript change to anomaly topic
 *      Fires whenever transcript updates
 *      Checks if its different from last published version
-*      Calls publishSpeechToAnomalyTopic() with current speech
+*      Calls anomalyLoggingService() with current speech
 *      Updates UseRef to track what was published 
 */
 
@@ -198,7 +198,10 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
     useEffect(() => {
         if (transcript && transcript !== lastPublishedTranscript.current) {
             // Publish the full transcript to the anomaly topic
-            publishSpeechToAnomalyTopic("Someone in the cart said:" + transcript);
+            anomalyLoggingService.logSpeech({
+                text: "Someone in the cart said:" + transcript,
+                source: "voice",
+            });
             lastPublishedTranscript.current = transcript;
         }
     }, [transcript]);

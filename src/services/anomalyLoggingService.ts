@@ -1,5 +1,6 @@
 import * as ROSLIB from "roslib";
 import { ai_anomaly_logging } from "../topics";
+import type { AnomalyMsg } from "../MessageTypes";
 
 type CommandSource = "voice" | "touch" | "unknown";
 
@@ -79,6 +80,21 @@ export const anomalyLoggingService = {
         ` source=${params.source ?? "unknown"}.`,
     });
   },
+
+  logSpeech: (params: {
+    nodeName?: string;
+    text: string;
+    source?: CommandSource;
+  }) => {
+    publishText({
+      nodeName: params.nodeName ?? "ui_speech_recognition",
+      importance: Importance.INFO,
+      frameId: "microphone",
+      msg:
+        `SPEECH_TRANSCRIPTION: ${params.text}` +
+        ` source=${params.source ?? "voice"}.`,
+    });
+  },
 };
 
 enum Importance {
@@ -105,30 +121,41 @@ function publishText(params: {
   nodeName: string;
   importance: number;
   msg: string;
+  frameId?: string;
 }) {
   const message = new ROSLIB.Message({
     header: {
       seq: 0,
       stamp: nowRosStamp(),
-      frame_id: "ui",
+      frame_id: params.frameId ?? "ui",
     },
     node_name: params.nodeName,
     importance: params.importance,
     type: AnomalyType.TEXT,
     msg: params.msg,
-    image: null,
+    image: {
+      header: {
+        seq: 0,
+        stamp: {
+          sec: 0,
+          nanosec: 0,
+        },
+        frame_id: "",
+      },
+      height: 0,
+      width: 0,
+      encoding: "",
+      is_bigendian: 0,
+      step: 0,
+      data: [] as number[],
+    },
     data_type: "",
-    data: [],
+    data: [] as number[],
   } as Partial<AnomalyMsg>);
 
   try {
-    const stringMessage = new ROSLIB.Message({
-      data: JSON.stringify(message),
-    });
-
-    ai_anomaly_logging.publish(stringMessage);
-    console.log("[ai_anomaly_logging -- Regular Message]", message);
-    console.log("[ai_anomaly_logging -- String Message]", stringMessage);
+    ai_anomaly_logging.publish(message);
+    console.log("[ai_anomaly_logging] published AnomalyMsg:", message);
   } catch (err) {
     console.warn("[ai_anomaly_logging] failed to publish", err);
   }

@@ -114,12 +114,6 @@ export const clicked_point = new ROSLIB.Topic({
   messageType: "geometry_msgs/msg/PointStamped",
 });
 
-export const right_video = new ROSLIB.Topic({
-  ros,
-  name: "right_image",
-  messageType: "sensor_msgs/msg/Image",
-});
-
 export const front_image = new ROSLIB.Topic({
   ros,
   name: "/zed_front/zed_node_0/rgb/color/rect/image/compressed",
@@ -152,14 +146,6 @@ export const brake_cmd = new ROSLIB.Topic({
   messageType: "std_msgs/UInt8",
 });
 
-//ai_anomaly_logging
-export const ai_anomaly_logging = new ROSLIB.Topic({
-  ros,
-  name: "/ai_anomaly_logging",
-  messageType: "anomaly_msg/msg/AnomalyMsg",
-});
-
-
 export const add_decisions = new ROSLIB.Topic({
   ros,
   name: "/add/decisions",
@@ -182,4 +168,11 @@ export const gps_global_path = new ROSLIB.Topic({
   ros,
   name: "/gps_global_path",
   messageType: "navigation_interface/msg/LatLongArray",
+});
+
+//ai_anomaly_logging
+export const ai_anomaly_logging = new ROSLIB.Topic({
+  ros,
+  name: "/ai_anomaly_logging",
+  messageType: "anomaly_msg/msg/AnomalyMsg",
 });
