@@ -18,7 +18,6 @@ import {
     nav_cmd,
     brake_cmd,
 } from "./topics";
-import { Image } from "./MessageTypes";
 import locations from "./locations.json";
 import { VehicleState } from "./MessageTypes";
 import { useEffect, useRef, useState } from "react";
@@ -34,7 +33,6 @@ import { vehicleService } from "./services/vehicleService";
 
 //ai anomoly logging
 import { anomalyLoggingService } from "./services/anomalyLoggingService";
-import { dashboardSocket } from "./services/dashboardSocket";
 
 type CommandSource = "voice" | "touch";
 
@@ -66,10 +64,6 @@ export default function CartView() {
     const { speak } = useTTS();
     const stopIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [pendingCommandSource, setPendingCommandSource] = useState<CommandSource>("touch");
-    const lastDashboardCameraPublish = useRef({
-        front: 0,
-        rear: 0,
-    });
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
         reached_destination: true,
@@ -846,108 +840,8 @@ export default function CartView() {
                 if (img) {
                     img.src = base64Image;
                 }
-
-                const now = Date.now();
-
-                if (now - lastDashboardCameraPublish.current[camera] >= 1000) {
-                    dashboardSocket.publishCameraFrame(CART_NAME, camera, base64Image);
-                    lastDashboardCameraPublish.current[camera] = now;
-                }
             }
             
-            function handle_image_data(message: ROSLIB.Message) {
-                const image = message as Image;
-
-                if (!image?.data) {
-                    console.warn("[Camera] Empty raw image received");
-                    return;
-                }
-
-                console.log("[Camera] Raw image received:", {
-                    width: image.width,
-                    height: image.height,
-                    encoding: image.encoding,
-                    dataLength: image.data.length,
-                });
-
-                const binaryData = atob(image.data);
-
-                const rawData = new Uint8Array(binaryData.length);
-                for (let i = 0; i < binaryData.length; i++) {
-                    rawData[i] = binaryData.charCodeAt(i);
-                }
-
-                const width = image.width;
-                const height = image.height;
-                const rgbaData = new Uint8ClampedArray(width * height * 4);
-                const encoding = image.encoding?.toLowerCase();
-
-                if (encoding === "rgb8") {
-                    for (let i = 0, j = 0; i < rawData.length && j < rgbaData.length; i += 3, j += 4) {
-                        rgbaData[j] = rawData[i];
-                        rgbaData[j + 1] = rawData[i + 1];
-                        rgbaData[j + 2] = rawData[i + 2];
-                        rgbaData[j + 3] = 255;
-                    }
-                } else if (encoding === "bgr8") {
-                    for (let i = 0, j = 0; i < rawData.length && j < rgbaData.length; i += 3, j += 4) {
-                        rgbaData[j] = rawData[i + 2];
-                        rgbaData[j + 1] = rawData[i + 1];
-                        rgbaData[j + 2] = rawData[i];
-                        rgbaData[j + 3] = 255;
-                    }
-                } else if (encoding === "rgba8") {
-                    for (let i = 0, j = 0; i < rawData.length && j < rgbaData.length; i += 4, j += 4) {
-                        rgbaData[j] = rawData[i];
-                        rgbaData[j + 1] = rawData[i + 1];
-                        rgbaData[j + 2] = rawData[i + 2];
-                        rgbaData[j + 3] = rawData[i + 3];
-                    }
-                } else if (encoding === "bgra8") {
-                    for (let i = 0, j = 0; i < rawData.length && j < rgbaData.length; i += 4, j += 4) {
-                        rgbaData[j] = rawData[i + 2];
-                        rgbaData[j + 1] = rawData[i + 1];
-                        rgbaData[j + 2] = rawData[i];
-                        rgbaData[j + 3] = rawData[i + 3];
-                    }
-                } else {
-                    console.warn("[Camera] Unsupported raw image encoding:", image.encoding);
-                    return;
-                }
-
-                const canvas = document.createElement("canvas");
-                const ctx = canvas.getContext("2d");
-
-                canvas.width = width;
-                canvas.height = height;
-
-                if (!ctx) {
-                    console.warn("[Camera] Could not create canvas context");
-                    return;
-                }
-
-                const actualImageData = ctx.createImageData(width, height);
-                actualImageData.data.set(rgbaData);
-                ctx.putImageData(actualImageData, 0, 0);
-
-                const base64Image = canvas.toDataURL("image/jpeg", 0.5);
-
-                const img = document.getElementById("camera-image") as HTMLImageElement | null;
-
-                if (img) {
-                    img.src = base64Image;
-                    img.width = width;
-                    img.height = height;
-                }
-
-                const now = Date.now();
-
-                if (now - lastDashboardCameraPublish.current >= 1000) {
-                    dashboardSocket.publishCameraFrame(CART_NAME, "front", base64Image);
-                    lastDashboardCameraPublish.current = now;
-                }
-            }
-
             // Dynamically populate Destinations list with data from locations.json
             locations.forEach((location: { lat: number, long: number, name: string, displayName: string }, index) => {
                 if (map.current == undefined) return;
