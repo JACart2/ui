@@ -1,5 +1,5 @@
 import * as ROSLIB from "roslib";
-import { ai_anomaly_logging } from "../topics";
+import { ai_anomaly_logging, ros } from "../topics";
 import type { AnomalyMsg } from "../MessageTypes";
 
 type CommandSource = "voice" | "touch" | "unknown";
@@ -123,19 +123,32 @@ function publishText(params: {
   msg: string;
   frameId?: string;
 }) {
+  const trimmedMsg = params.msg.trim();
+
+  if (!trimmedMsg) {
+    console.warn("[ai_anomaly_logging] empty message ignored");
+    return;
+  }
+
+  if (!ros.isConnected) {
+    console.warn(
+      "[ai_anomaly_logging] ROS is not connected. Message was not published:",
+      trimmedMsg
+    );
+    return;
+  }
+
   const message = new ROSLIB.Message({
     header: {
-      seq: 0,
       stamp: nowRosStamp(),
       frame_id: params.frameId ?? "ui",
     },
     node_name: params.nodeName,
     importance: params.importance,
     type: AnomalyType.TEXT,
-    msg: params.msg,
+    msg: trimmedMsg,
     image: {
       header: {
-        seq: 0,
         stamp: {
           sec: 0,
           nanosec: 0,
@@ -155,7 +168,13 @@ function publishText(params: {
 
   try {
     ai_anomaly_logging.publish(message);
-    console.log("[ai_anomaly_logging] published AnomalyMsg:", message);
+
+    console.log("[ai_anomaly_logging] published AnomalyMsg:", {
+      nodeName: params.nodeName,
+      importance: params.importance,
+      type: AnomalyType.TEXT,
+      msg: trimmedMsg,
+    });
   } catch (err) {
     console.warn("[ai_anomaly_logging] failed to publish", err);
   }
