@@ -1033,57 +1033,56 @@ export default function CartView() {
             }}
         >
             <div id="split">
-<div id="sidebar">
-    <img id="front-camera-image" />
-    <img id="rear-camera-image" />
+            <div id="sidebar">
+                <img id="front-camera-image" />
+                <img id="rear-camera-image" />
 
-    {state.is_navigating && (
-        <div id="trip-info-container">
-            <Card
-                className="trip-progress-card"
-                title="Current Trip"
-                size="small"
-            >
-                <Flex vertical gap="middle">
-                    <div>
-                        <Flex
-                            justify="space-between"
-                            align="center"
+                {state.is_navigating && (
+                    <div id="trip-info-container">
+                        <Card
+                            className="trip-progress-card"
+                            title="Current Trip"
+                            size="small"
                         >
-                            <strong>Trip Progress</strong>
-                        </Flex>
+                            <Flex vertical gap="middle">
+                                <div>
+                                    <Flex
+                                        justify="space-between"
+                                        align="center"
+                                    >
+                                        <strong>Trip Progress</strong>
+                                    </Flex>
 
-                        <Progress
-                            type="line"
-                            percent={Math.round(tripProgress)}
-                            status="active"
-                        />
+                                    <Progress
+                                        type="line"
+                                        percent={Math.round(tripProgress)}
+                                        status="active"
+                                    />
+                                </div>
+
+                                <Flex
+                                    justify="space-between"
+                                    align="center"
+                                >
+                                    <span>Estimated time remaining</span>
+                                    <strong>{formatEta(etaSeconds)}</strong>
+                                </Flex>
+
+                                {selectedLocation && (
+                                    <Flex
+                                        justify="space-between"
+                                        align="center"
+                                    >
+                                        <span>Destination</span>
+                                        <strong>
+                                            {selectedLocation.displayName}
+                                        </strong>
+                                    </Flex>
+                                )}
+                            </Flex>
+                        </Card>
                     </div>
-
-                    <Flex
-                        justify="space-between"
-                        align="center"
-                    >
-                        <span>Estimated time remaining</span>
-                        <strong>{formatEta(etaSeconds)}</strong>
-                    </Flex>
-
-                    {selectedLocation && (
-                        <Flex
-                            justify="space-between"
-                            align="center"
-                        >
-                            <span>Destination</span>
-                            <strong>
-                                {selectedLocation.displayName}
-                            </strong>
-                        </Flex>
-                    )}
-                </Flex>
-            </Card>
-        </div>
-    )}
-
+                )}
                 <h2>Destinations</h2>
                     <ul id="destinations">
                         {locations.map((location, index) => (
