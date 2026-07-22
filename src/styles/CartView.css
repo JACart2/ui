@@ -15,7 +15,28 @@
 }
 
 #trip-info-container {
-    margin: 0 12px;
+    margin: 12px;
+}
+
+.trip-progress-card {
+    width: 100%;
+    height: fit-content;
+    outline: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.trip-progress-card .ant-card-head {
+    background-color: var(--jmu-purple);
+    color: white;
+}
+
+.trip-progress-card .ant-card-head-title {
+    color: white;
+    font-weight: bold;
+}
+
+.trip-progress-card .ant-progress {
+    margin-top: 6px;
 }
 
 h2 {

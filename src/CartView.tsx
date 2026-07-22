@@ -17,13 +17,16 @@ import {
     stop_topic,
     nav_cmd,
     brake_cmd,
+    eta,
+    eta_percentage,
 } from "./topics";
+
 import locations from "./locations.json";
 import { VehicleState } from "./MessageTypes";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { useSpeechRecognition } from 'react-speech-recognition';
-import { Button, Flex, Modal, Tour, TourProps, ConfigProvider, message } from "antd";
+import { Button, Card, Flex, Modal, Progress, Tour, TourProps, ConfigProvider, message } from "antd";
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
@@ -49,6 +52,28 @@ function LineString(coordinates: Position[]): GeoJSON {
     };
 }
 
+function formatEta(seconds: number | null) {
+    if (seconds === null) {
+        return "Calculating...";
+    }
+
+    const roundedSeconds = Math.max(
+        0,
+        Math.round(seconds)
+    );
+
+    const minutes = Math.floor(roundedSeconds / 60);
+    const remainingSeconds = roundedSeconds % 60;
+
+    if (minutes === 0) {
+        return `${remainingSeconds} sec`;
+    }
+
+    return `${minutes} min ${remainingSeconds
+        .toString()
+        .padStart(2, "0")} sec`;
+}
+
 
 export default function CartView() {
     const map = useRef<MapLibreMap | null>(null);
@@ -69,6 +94,8 @@ export default function CartView() {
         reached_destination: true,
         stopped: false,
     });
+    const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
+    const [tripProgress, setTripProgress] = useState(0);
 
     useEffect(() => {
         const handleConnection = () => {
@@ -259,6 +286,58 @@ export default function CartView() {
         resetTranscript
     } = useSpeechRecognition();
 
+    // Handle UI trip progress and ETA updates based on ROS messages
+    useEffect(() => {
+    const handleEta = (message: ROSLIB.Message) => {
+        const etaMessage = message as unknown as {
+            data?: number;
+        };
+
+        const seconds = Number(etaMessage.data);
+
+        if (!Number.isFinite(seconds)) {
+            console.warn("[ETA] Invalid ETA message:", message);
+            return;
+        }
+
+        setEtaSeconds(Math.max(0, seconds));
+    };
+
+    const handleEtaPercentage = (message: ROSLIB.Message) => {
+        const progressMessage = message as unknown as {
+            data?: number;
+        };
+
+        const percentage = Number(progressMessage.data);
+
+        if (!Number.isFinite(percentage)) {
+            console.warn(
+                "[ETA] Invalid progress message:",
+                message
+            );
+            return;
+        }
+
+        setTripProgress(
+            Math.max(0, Math.min(100, percentage))
+        );
+    };
+
+    console.log("[ETA] Subscribing to:", eta.name);
+    console.log(
+        "[ETA] Subscribing to:",
+        eta_percentage.name
+    );
+
+    eta.subscribe(handleEta);
+    eta_percentage.subscribe(handleEtaPercentage);
+
+    return () => {
+        eta.unsubscribe(handleEta);
+        eta_percentage.unsubscribe(handleEtaPercentage);
+    };
+}, []);
+
     // Clear transcript after command processing
     useEffect(() => {
         if (transcript) {
@@ -331,6 +410,9 @@ export default function CartView() {
         ).catch((err) => {
           console.warn("[Dashboard] Trip update failed, continuing navigation:", err);
         });
+
+        setEtaSeconds(null);
+        setTripProgress(0);
     
         navigateToLocation(selectedLocation);
       }
@@ -601,24 +683,50 @@ export default function CartView() {
 
     useEffect(() => {
         const callback = (message: ROSLIB.Message) => {
-            if (map.current == undefined) return;
-
             const newState = message as VehicleState;
+
             setState(newState);
+
+            /*
+            * Reset ETA/progress when the cart stops navigating.
+            */
+            if (!newState.is_navigating) {
+                setEtaSeconds(null);
+
+                if (newState.reached_destination) {
+                    setTripProgress(100);
+                } else {
+                    setTripProgress(0);
+                }
+            }
 
             if (newState.reached_destination && currentLocation) {
                 speak(`Arrived at ${currentLocation}`);
-                setCurrentLocation(null); // Clear current location when destination is reached
+                setCurrentLocation(null);
             }
 
-            if (newState.reached_destination) {
-                const source = map.current.getSource("remaining_path") as GeoJSONSource;
-                source.setData(LineString([]));
+            /*
+            * Map cleanup requires the map to exist, but the state and ETA
+            * cleanup above should still run even if the map is unavailable.
+            */
+            if (
+                newState.reached_destination &&
+                map.current !== undefined &&
+                map.current !== null
+            ) {
+                const source = map.current.getSource(
+                    "remaining_path"
+                ) as GeoJSONSource | undefined;
+
+                source?.setData(LineString([]));
             }
         };
 
         vehicle_state.subscribe(callback);
-        return () => vehicle_state.unsubscribe(callback);
+
+        return () => {
+            vehicle_state.unsubscribe(callback);
+        };
     }, [speak, currentLocation]);
 
     useEffect(() => {
@@ -925,10 +1033,58 @@ export default function CartView() {
             }}
         >
             <div id="split">
-                <div id="sidebar">
-                    <img id="front-camera-image" />
-                    <img id="rear-camera-image" />
-                    <h2>Destinations</h2>
+<div id="sidebar">
+    <img id="front-camera-image" />
+    <img id="rear-camera-image" />
+
+    {state.is_navigating && (
+        <div id="trip-info-container">
+            <Card
+                className="trip-progress-card"
+                title="Current Trip"
+                size="small"
+            >
+                <Flex vertical gap="middle">
+                    <div>
+                        <Flex
+                            justify="space-between"
+                            align="center"
+                        >
+                            <strong>Trip Progress</strong>
+                        </Flex>
+
+                        <Progress
+                            type="line"
+                            percent={Math.round(tripProgress)}
+                            status="active"
+                        />
+                    </div>
+
+                    <Flex
+                        justify="space-between"
+                        align="center"
+                    >
+                        <span>Estimated time remaining</span>
+                        <strong>{formatEta(etaSeconds)}</strong>
+                    </Flex>
+
+                    {selectedLocation && (
+                        <Flex
+                            justify="space-between"
+                            align="center"
+                        >
+                            <span>Destination</span>
+                            <strong>
+                                {selectedLocation.displayName}
+                            </strong>
+                        </Flex>
+                    )}
+                </Flex>
+            </Card>
+        </div>
+    )}
+
+                <h2>Destinations</h2>
                     <ul id="destinations">
                         {locations.map((location, index) => (
                             <li

@@ -170,6 +170,18 @@ export const gps_global_path = new ROSLIB.Topic({
   messageType: "navigation_interface/msg/LatLongArray",
 });
 
+export const eta = new ROSLIB.Topic({
+  ros,
+  name: "/eta",
+  messageType: "std_msgs/msg/UInt64",
+});
+
+export const eta_percentage = new ROSLIB.Topic({
+  ros,
+  name: "/eta_percentage",
+  messageType: "std_msgs/msg/UInt64",
+});
+
 //ai_anomaly_logging
 export const ai_anomaly_logging = new ROSLIB.Topic({
   ros,
