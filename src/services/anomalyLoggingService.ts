@@ -1,6 +1,19 @@
 import * as ROSLIB from "roslib";
 import { ai_anomaly_logging, ros } from "../topics";
 import type { AnomalyMsg } from "../MessageTypes";
+import locations from "../locations.json";
+
+
+type Location = {
+  name: string;
+  displayName: string;
+  lat: number;
+  long: number;
+  url: string;
+  disabled?: boolean;
+};
+
+const destinationLocations = locations as Location[];
 
 type CommandSource = "voice" | "touch" | "unknown";
 
@@ -21,7 +34,7 @@ export const anomalyLoggingService = {
     reason?: string;
   } = {}) => {
     publishText({
-      nodeName: params.nodeName ?? "ui_voice",
+      nodeName: params.nodeName ?? "ui_interaction",
       importance: Importance.ERROR,
       msg:
         `USER_CMD STOP: Emergency stop requested by user.` +
@@ -39,7 +52,7 @@ export const anomalyLoggingService = {
     destination?: string | null;
   } = {}) => {
     publishText({
-      nodeName: params.nodeName ?? "ui_voice",
+      nodeName: params.nodeName ?? "ui_interaction",
       importance: Importance.INFO,
       msg:
         `USER_CMD RESUME: User resumed ride.` +
@@ -56,7 +69,7 @@ export const anomalyLoggingService = {
     isNavigating?: boolean;
   } = {}) => {
     publishText({
-      nodeName: params.nodeName ?? "ui_voice",
+      nodeName: params.nodeName ?? "ui_interaction",
       importance: Importance.WARNING,
       msg:
         `USER_CMD HELP: User requested help.` +
@@ -70,13 +83,22 @@ export const anomalyLoggingService = {
     nodeName?: string;
     source?: CommandSource;
     destination: string;
-    startMethod: "VOICE_CONFIRM" | "UI_CONFIRM" | "UNKNOWN";
   }) => {
+    const normalizedDestination = params.destination.trim().toLowerCase();
+
+    const location = destinationLocations.find(
+      (item) =>
+        item.name.toLowerCase() === normalizedDestination ||
+        item.displayName.toLowerCase() === normalizedDestination
+    );
+
     publishText({
-      nodeName: params.nodeName ?? "ui_voice",
+      nodeName: params.nodeName ?? "ui_interaction",
       importance: Importance.INFO,
       msg:
-        `TRIP_START: Navigation started to "${params.destination}" via ${params.startMethod}.` +
+        `TRIP_START: Navigation started to` +
+        ` "${params.destination}"` +
+        ` (Lat:${location?.lat ?? "unknown"} Long:${location?.long ?? "unknown"})` +
         ` source=${params.source ?? "unknown"}.`,
     });
   },
@@ -91,8 +113,7 @@ export const anomalyLoggingService = {
       importance: Importance.INFO,
       frameId: "microphone",
       msg:
-        `SPEECH_TRANSCRIPTION: ${params.text}` +
-        ` source=${params.source ?? "voice"}.`,
+        `SPEECH_TRANSCRIPTION: ${params.text}`,
     });
   },
 };

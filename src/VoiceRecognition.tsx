@@ -199,7 +199,7 @@ const VoiceCommands = ({ onCommand, locations }: VoiceCommandsProps) => {
         if (transcript && transcript !== lastPublishedTranscript.current) {
             // Publish the full transcript to the anomaly topic
             anomalyLoggingService.logSpeech({
-                text: "Someone in the cart said:" + transcript,
+                text: transcript,
                 source: "voice",
             });
             lastPublishedTranscript.current = transcript;
