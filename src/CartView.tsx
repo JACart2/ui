@@ -12,8 +12,6 @@ import {
     gps_send,
     gps_global_path,
     vehicle_state,
-    rear_image,
-    front_image,
     stop_topic,
     nav_cmd,
     brake_cmd,
@@ -873,82 +871,6 @@ export default function CartView() {
                 }
                 source.setData(LineString(visual_path_coordinates));
             });
-
-            console.log("[Camera] subscribing to front compressed image topic:", front_image.name);
-
-            front_image.subscribe((message: ROSLIB.Message) => {
-                console.log("[Camera] front compressed image received");
-
-                handleCompressedImageData(
-                    message as unknown as { format?: string; data: string | number[] },
-                    "front"
-                );
-            });
-
-            console.log("[Camera] subscribing to rear compressed image topic:", rear_image.name);
-
-            rear_image.subscribe((message: ROSLIB.Message) => {
-                console.log("[Camera] rear compressed image received");
-
-                handleCompressedImageData(
-                    message as unknown as { format?: string; data: string | number[] },
-                    "rear"
-                );
-            });
-
-            function uint8ArrayToBase64(bytes: number[]) {
-                const chunkSize = 0x8000;
-                let binary = "";
-
-                for (let i = 0; i < bytes.length; i += chunkSize) {
-                    const chunk = bytes.slice(i, i + chunkSize);
-                    binary += String.fromCharCode(...chunk);
-                }
-
-                return btoa(binary);
-            }
-
-            function handleCompressedImageData(
-                image: { format?: string; data: string | number[] },
-                camera: "front" | "rear" = "front"
-            ) {
-                if (!image?.data || image.data.length === 0) {
-                    console.warn("[Camera] Empty compressed image received");
-                    return;
-                }
-
-                console.log("[Camera] Compressed image received:", {
-                    camera,
-                    format: image.format,
-                    dataType: typeof image.data,
-                    isArray: Array.isArray(image.data),
-                    length: image.data.length,
-                });
-
-                const format = image.format?.toLowerCase().includes("png")
-                    ? "png"
-                    : "jpeg";
-
-                let base64Data: string;
-
-                // ROSBridge commonly sends uint8[] fields as base64 strings.
-                if (typeof image.data === "string") {
-                    base64Data = image.data;
-                } else {
-                    base64Data = uint8ArrayToBase64(image.data);
-                }
-
-                const base64Image = `data:image/${format};base64,${base64Data}`;
-
-                console.log("[Camera] base64 image preview:", base64Image.slice(0, 40));
-
-                const imgId = camera === "front" ? "front-camera-image" : "rear-camera-image";
-                const img = document.getElementById(imgId) as HTMLImageElement | null;
-
-                if (img) {
-                    img.src = base64Image;
-                }
-            }
             
             // Dynamically populate Destinations list with data from locations.json
             locations.forEach((location: { lat: number, long: number, name: string, displayName: string }, index) => {
@@ -1034,9 +956,6 @@ export default function CartView() {
         >
             <div id="split">
             <div id="sidebar">
-                <img id="front-camera-image" />
-                <img id="rear-camera-image" />
-
                 {state.is_navigating && (
                     <div id="trip-info-container">
                         <Card

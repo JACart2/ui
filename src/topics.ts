@@ -114,20 +114,6 @@ export const clicked_point = new ROSLIB.Topic({
   messageType: "geometry_msgs/msg/PointStamped",
 });
 
-export const front_image = new ROSLIB.Topic({
-  ros,
-  name: "/zed_front/zed_node_0/rgb/color/rect/image/compressed",
-  messageType: "sensor_msgs/msg/CompressedImage",
-  throttle_rate: 1000,
-});
-
-export const rear_image = new ROSLIB.Topic({
-  ros,
-  name: "/zed_rear/zed_node_1/rgb/color/rect/image/compressed",
-  messageType: "sensor_msgs/msg/CompressedImage",
-  throttle_rate: 1000,
-});
-
 export const stop_topic = new ROSLIB.Topic({
   ros,
   name: "/set_manual_control",
