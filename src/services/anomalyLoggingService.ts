@@ -1,5 +1,19 @@
 import * as ROSLIB from "roslib";
-import { ai_anomaly_logging } from "../topics";
+import { ai_anomaly_logging, ros } from "../topics";
+import type { AnomalyMsg } from "../MessageTypes";
+import locations from "../locations.json";
+
+
+type Location = {
+  name: string;
+  displayName: string;
+  lat: number;
+  long: number;
+  url: string;
+  disabled?: boolean;
+};
+
+const destinationLocations = locations as Location[];
 
 type CommandSource = "voice" | "touch" | "unknown";
 
@@ -20,7 +34,7 @@ export const anomalyLoggingService = {
     reason?: string;
   } = {}) => {
     publishText({
-      nodeName: params.nodeName ?? "ui_voice",
+      nodeName: params.nodeName ?? "ui_interaction",
       importance: Importance.ERROR,
       msg:
         `USER_CMD STOP: Emergency stop requested by user.` +
@@ -38,7 +52,7 @@ export const anomalyLoggingService = {
     destination?: string | null;
   } = {}) => {
     publishText({
-      nodeName: params.nodeName ?? "ui_voice",
+      nodeName: params.nodeName ?? "ui_interaction",
       importance: Importance.INFO,
       msg:
         `USER_CMD RESUME: User resumed ride.` +
@@ -55,7 +69,7 @@ export const anomalyLoggingService = {
     isNavigating?: boolean;
   } = {}) => {
     publishText({
-      nodeName: params.nodeName ?? "ui_voice",
+      nodeName: params.nodeName ?? "ui_interaction",
       importance: Importance.WARNING,
       msg:
         `USER_CMD HELP: User requested help.` +
@@ -69,14 +83,37 @@ export const anomalyLoggingService = {
     nodeName?: string;
     source?: CommandSource;
     destination: string;
-    startMethod: "VOICE_CONFIRM" | "UI_CONFIRM" | "UNKNOWN";
   }) => {
+    const normalizedDestination = params.destination.trim().toLowerCase();
+
+    const location = destinationLocations.find(
+      (item) =>
+        item.name.toLowerCase() === normalizedDestination ||
+        item.displayName.toLowerCase() === normalizedDestination
+    );
+
     publishText({
-      nodeName: params.nodeName ?? "ui_voice",
+      nodeName: params.nodeName ?? "ui_interaction",
       importance: Importance.INFO,
       msg:
-        `TRIP_START: Navigation started to "${params.destination}" via ${params.startMethod}.` +
+        `TRIP_START: Navigation started to` +
+        ` "${params.destination}"` +
+        ` (Lat:${location?.lat ?? "unknown"} Long:${location?.long ?? "unknown"})` +
         ` source=${params.source ?? "unknown"}.`,
+    });
+  },
+
+  logSpeech: (params: {
+    nodeName?: string;
+    text: string;
+    source?: CommandSource;
+  }) => {
+    publishText({
+      nodeName: params.nodeName ?? "ui_speech_recognition",
+      importance: Importance.INFO,
+      frameId: "microphone",
+      msg:
+        `SPEECH_TRANSCRIPTION: ${params.text}`,
     });
   },
 };
@@ -105,30 +142,60 @@ function publishText(params: {
   nodeName: string;
   importance: number;
   msg: string;
+  frameId?: string;
 }) {
+  const trimmedMsg = params.msg.trim();
+
+  if (!trimmedMsg) {
+    console.warn("[ai_anomaly_logging] empty message ignored");
+    return;
+  }
+
+  if (!ros.isConnected) {
+    console.warn(
+      "[ai_anomaly_logging] ROS is not connected. Message was not published:",
+      trimmedMsg
+    );
+    return;
+  }
+
   const message = new ROSLIB.Message({
     header: {
-      seq: 0,
       stamp: nowRosStamp(),
-      frame_id: "ui",
+      frame_id: params.frameId ?? "ui",
     },
     node_name: params.nodeName,
     importance: params.importance,
     type: AnomalyType.TEXT,
-    msg: params.msg,
-    image: null,
+    msg: trimmedMsg,
+    image: {
+      header: {
+        stamp: {
+          sec: 0,
+          nanosec: 0,
+        },
+        frame_id: "",
+      },
+      height: 0,
+      width: 0,
+      encoding: "",
+      is_bigendian: 0,
+      step: 0,
+      data: [] as number[],
+    },
     data_type: "",
-    data: [],
+    data: [] as number[],
   } as Partial<AnomalyMsg>);
 
   try {
-    const stringMessage = new ROSLIB.Message({
-      data: JSON.stringify(message),
-    });
+    ai_anomaly_logging.publish(message);
 
-    ai_anomaly_logging.publish(stringMessage);
-    console.log("[ai_anomaly_logging -- Regular Message]", message);
-    console.log("[ai_anomaly_logging -- String Message]", stringMessage);
+    console.log("[ai_anomaly_logging] published AnomalyMsg:", {
+      nodeName: params.nodeName,
+      importance: params.importance,
+      type: AnomalyType.TEXT,
+      msg: trimmedMsg,
+    });
   } catch (err) {
     console.warn("[ai_anomaly_logging] failed to publish", err);
   }

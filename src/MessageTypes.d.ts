@@ -9,7 +9,7 @@ declare interface VehicleState extends ROSLIB.Message {
 declare interface PoseWithCovarianceStamped extends ROSLIB.Message {
   header: {
     seq: number;
-    stamp: { secs: number; nsecs: number };
+    stamp: { sec: number; nanosec: number };
     frame_id: string;
   };
   pose: {
@@ -20,8 +20,8 @@ declare interface PoseWithCovarianceStamped extends ROSLIB.Message {
 declare interface Header {
   seq: number;
   stamp: {
-    secs: number;
-    nsecs: number;
+    sec: number;
+    nanosec: number;
   };
   frame_id: string;
 }
@@ -40,7 +40,7 @@ declare interface Image {
   encoding: string;
   is_bigendian: number;
   step: number;
-  data: string;
+  data: number[];
 }
 
 declare interface CompressedImage {
@@ -62,7 +62,7 @@ declare interface ROSMarker {
   pose: ROSLIB.Pose;
   scale: Vector3;
   color: ColorRGBA;
-  lifetime: { secs: number; nsecs: number }; // How long the marker lasts
+  lifetime: { sec: number; nanosec: number }; // How long the marker lasts
   frame_locked?: boolean;
   points?: Vector3[];
   colors?: ColorRGBA[]; // Per-vertex colors (optional)

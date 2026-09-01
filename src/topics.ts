@@ -55,7 +55,6 @@ export function disconnectFromRos() {
 
 ros.on("connection", () => {
   console.log("Connected to ROS");
-  console.log("Available ROS message types:", ros.messageTypes); // Log all available message types
 
   isConnecting = false;
 
@@ -115,19 +114,6 @@ export const clicked_point = new ROSLIB.Topic({
   messageType: "geometry_msgs/msg/PointStamped",
 });
 
-export const right_video = new ROSLIB.Topic({
-  ros,
-  name: "right_image",
-  messageType: "sensor_msgs/msg/Image",
-});
-
-export const left_image = new ROSLIB.Topic({
-  ros,
-  name: "/zed/zed_node/rgb/image_rect_color",
-  messageType: "sensor_msgs/msg/Image",
-  throttle_rate: 150,
-});
-
 export const stop_topic = new ROSLIB.Topic({
   ros,
   name: "/set_manual_control",
@@ -146,9 +132,45 @@ export const brake_cmd = new ROSLIB.Topic({
   messageType: "std_msgs/UInt8",
 });
 
-// ai_anomaly_logging
+export const add_decisions = new ROSLIB.Topic({
+  ros,
+  name: "/add/decisions",
+  messageType: "std_msgs/String",
+});
+
+export const gps_request = new ROSLIB.Topic({
+  ros,
+  name: "/gps_request",
+  messageType: "navigation_interface/msg/LatLongPoint",
+});
+
+export const gps_send = new ROSLIB.Topic({
+  ros,
+  name: "/gps_send",
+  messageType: "navigation_interface/msg/LatLongPoint",
+});
+
+export const gps_global_path = new ROSLIB.Topic({
+  ros,
+  name: "/gps_global_path",
+  messageType: "navigation_interface/msg/LatLongArray",
+});
+
+export const eta = new ROSLIB.Topic({
+  ros,
+  name: "/eta",
+  messageType: "std_msgs/msg/UInt64",
+});
+
+export const eta_percentage = new ROSLIB.Topic({
+  ros,
+  name: "/eta_percentage",
+  messageType: "std_msgs/msg/UInt64",
+});
+
+//ai_anomaly_logging
 export const ai_anomaly_logging = new ROSLIB.Topic({
   ros,
-  name: "/ai_anomaly_logging_ui",
-  messageType: "std_msgs/String",
+  name: "/ai_anomaly_logging",
+  messageType: "anomaly_msg/msg/AnomalyMsg",
 });
