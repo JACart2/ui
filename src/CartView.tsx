@@ -1,28 +1,43 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./styles/CartView.css";
 import { Protocol } from "pmtiles";
-import maplibregl, { GeoJSONSource, Marker, Popup } from "maplibre-gl";
+import maplibregl, { GeoJSONSource, Marker, Popup, Map as MapLibreMap } from "maplibre-gl";
 import GeoJSON, { Position } from "geojson";
 type GeoJSON = GeoJSON.GeoJSON;
 import * as ROSLIB from "roslib";
-import { ros, clicked_point, vehicle_state, visual_path, limited_pose, left_image, stop_topic, nav_cmd, brake_cmd } from "./topics";
-import { Image, ROSMarkerList } from "./MessageTypes";
-import { rosToMapCoords, lngLatToMapCoords } from "./transform";
+
+import {
+    ros,
+    gps_request,
+    gps_send,
+    gps_global_path,
+    vehicle_state,
+    stop_topic,
+    nav_cmd,
+    brake_cmd,
+    eta,
+    eta_percentage,
+} from "./topics";
+
 import locations from "./locations.json";
-import { PoseWithCovarianceStamped, VehicleState } from "./MessageTypes";
+import { VehicleState } from "./MessageTypes";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { useSpeechRecognition } from 'react-speech-recognition';
-import { Button, Flex, Modal, Tour, TourProps, ConfigProvider, message } from "antd";
+import { Button, Card, Flex, Modal, Progress, Tour, TourProps, ConfigProvider, message } from "antd";
 import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import DevMenu from "./ui/DevMenu";
 import VoiceCommands from "./VoiceRecognition";
 import { useTTS } from './useTTS';
 import { vehicleService } from "./services/vehicleService";
+
+//ai anomoly logging
 import { anomalyLoggingService } from "./services/anomalyLoggingService";
 
 type CommandSource = "voice" | "touch";
+
+const CART_NAME = import.meta.env.VITE_CART_NAME ?? "james";
 
 function LineString(coordinates: Position[]): GeoJSON {
     return {
@@ -35,9 +50,31 @@ function LineString(coordinates: Position[]): GeoJSON {
     };
 }
 
+function formatEta(seconds: number | null) {
+    if (seconds === null) {
+        return "Calculating...";
+    }
+
+    const roundedSeconds = Math.max(
+        0,
+        Math.round(seconds)
+    );
+
+    const minutes = Math.floor(roundedSeconds / 60);
+    const remainingSeconds = roundedSeconds % 60;
+
+    if (minutes === 0) {
+        return `${remainingSeconds} sec`;
+    }
+
+    return `${minutes} min ${remainingSeconds
+        .toString()
+        .padStart(2, "0")} sec`;
+}
+
 
 export default function CartView() {
-    const map = useRef<maplibregl.Map | null>(null);
+    const map = useRef<MapLibreMap | null>(null);
     const mapRef = useRef(null);
     const [currentLocation, setCurrentLocation] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,32 +87,56 @@ export default function CartView() {
     const { speak } = useTTS();
     const stopIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [pendingCommandSource, setPendingCommandSource] = useState<CommandSource>("touch");
-
     const [state, setState] = useState<VehicleState>({
         is_navigating: false,
         reached_destination: true,
         stopped: false,
     });
+    const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
+    const [tripProgress, setTripProgress] = useState(0);
 
     useEffect(() => {
-        const handleConnection = () => setRosConnected(true);
-        const handleClose = () => setRosConnected(false);
-        const handleError = () => setRosConnected(false);
-    
-        setRosConnected(ros.isConnected);
-    
+        const handleConnection = () => {
+            console.log("[ROS] connected");
+
+            setRosConnected(true);
+        };
+
+        const handleClose = () => {
+            console.log("[ROS] disconnected");
+
+            setRosConnected(false);
+        };
+
+        const handleError = (error: unknown) => {
+            console.error("[ROS] connection error:", error);
+
+            setRosConnected(false);
+        };
+
         ros.on("connection", handleConnection);
         ros.on("close", handleClose);
         ros.on("error", handleError);
-    
+
+        /*
+        * The ROS connection may have completed before CartView mounted.
+        * Start the service immediately in that case.
+        */
+        if (ros.isConnected) {
+            handleConnection();
+        } else {
+            setRosConnected(false);
+        }
+
         const interval = window.setInterval(() => {
             setRosConnected(ros.isConnected);
         }, 1000);
-    
+
         return () => {
             ros.off("connection", handleConnection);
             ros.off("close", handleClose);
             ros.off("error", handleError);
+
             window.clearInterval(interval);
         };
     }, []);
@@ -223,6 +284,58 @@ export default function CartView() {
         resetTranscript
     } = useSpeechRecognition();
 
+    // Handle UI trip progress and ETA updates based on ROS messages
+    useEffect(() => {
+    const handleEta = (message: ROSLIB.Message) => {
+        const etaMessage = message as unknown as {
+            data?: number;
+        };
+
+        const seconds = Number(etaMessage.data);
+
+        if (!Number.isFinite(seconds)) {
+            console.warn("[ETA] Invalid ETA message:", message);
+            return;
+        }
+
+        setEtaSeconds(Math.max(0, seconds));
+    };
+
+    const handleEtaPercentage = (message: ROSLIB.Message) => {
+        const progressMessage = message as unknown as {
+            data?: number;
+        };
+
+        const percentage = Number(progressMessage.data);
+
+        if (!Number.isFinite(percentage)) {
+            console.warn(
+                "[ETA] Invalid progress message:",
+                message
+            );
+            return;
+        }
+
+        setTripProgress(
+            Math.max(0, Math.min(100, percentage))
+        );
+    };
+
+    console.log("[ETA] Subscribing to:", eta.name);
+    console.log(
+        "[ETA] Subscribing to:",
+        eta_percentage.name
+    );
+
+    eta.subscribe(handleEta);
+    eta_percentage.subscribe(handleEtaPercentage);
+
+    return () => {
+        eta.unsubscribe(handleEta);
+        eta_percentage.unsubscribe(handleEtaPercentage);
+    };
+}, []);
+
     // Clear transcript after command processing
     useEffect(() => {
         if (transcript) {
@@ -270,18 +383,39 @@ export default function CartView() {
     };
 
     const handleConfirmation = () => {
-        if (selectedLocation) {
-            anomalyLoggingService.logTripStart({
-                source: pendingCommandSource,
-                destination: selectedLocation.displayName,
-                startMethod: pendingCommandSource === "voice" ? "VOICE_CONFIRM" : "UI_CONFIRM",
-            });
+      if (selectedLocation) {
+        anomalyLoggingService.logTripStart({
+          source: pendingCommandSource,
+          destination: selectedLocation.displayName,
+          startMethod: pendingCommandSource === "voice" ? "VOICE_CONFIRM" : "UI_CONFIRM",
+        });
+    
+        speak(`Now navigating to ${selectedLocation.name}`);
+    
+        setState(prev => ({
+          ...prev,
+          is_navigating: true,
+          reached_destination: false,
+        }));
+    
+        vehicleService.updateTrip(
+          import.meta.env.VITE_CART_NAME ?? "james",
+          {
+            startLocation: "Current location",
+            endLocation: selectedLocation.displayName,
+            tripProgress: 0,
+          }
+        ).catch((err) => {
+          console.warn("[Dashboard] Trip update failed, continuing navigation:", err);
+        });
 
-            speak(`Now navigating to ${selectedLocation.name}`);
-            setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
-            navigateToLocation(selectedLocation);
-        }
-        setIsConfirmationModalOpen(false);
+        setEtaSeconds(null);
+        setTripProgress(0);
+    
+        navigateToLocation(selectedLocation);
+      }
+    
+      setIsConfirmationModalOpen(false);
     };
 
     const handleConfirmationCancel = () => {
@@ -371,11 +505,17 @@ export default function CartView() {
             speak("Stop failed");
         }
     };
+
     // Sends an alert to the remote dashboard.
     const requestHelp = () => {
-        vehicleService.requestHelp("James").then(res => setHelpRequested(res.helpRequested));
-        speak("Help requested");
-    }
+        const nextHelpRequested = !helpRequested;
+        vehicleService
+            .requestHelp(CART_NAME, nextHelpRequested)
+            .then(res => setHelpRequested(res.helpRequested))
+            .catch(err => console.error("[Help Requested] failed:", err));
+
+        speak(nextHelpRequested ? "Help requested" : "Help request cleared");
+    };
 
     /**
      * Processes voice commands received from the VoiceCommands component.
@@ -508,38 +648,28 @@ export default function CartView() {
     }, []);
 
     function navigateTo(lat: number, lng: number) {
-      if (!ros.isConnected) {
-        console.error("Cannot publish destination: ROS is not connected");
-        message.error("Cannot navigate: ROS is not connected");
-        return;
-      }
-    
-      console.log(`Target Coordinates: ${lat}, ${lng}`);
-    
-      const [x, y] = lngLatToMapCoords({ lat, lng });
-    
-      const target = new ROSLIB.Message({
-        header: {
-          stamp: {
-            sec: 0,
-            nanosec: 0,
-          },
-          frame_id: "map",
-        },
-        point: {
-          x,
-          y,
-          z: 0,
-        },
-      });
-    
-      console.log("Publishing /clicked_point:", target);
-      clicked_point.publish(target);
+
+        if (!ros.isConnected) {
+            console.error("Cannot publish destination: ROS is not connected");
+            message.error("Cannot navigate: ROS is not connected");
+            return;
+        }
+
+        console.log(`Publishing GPS destination: ${lat}, ${lng}`);
+
+        const target = new ROSLIB.Message({
+            latitude: lat,
+            longitude: lng,
+        });
+
+        console.log("Publishing /gps_request:", target);
+        gps_request.publish(target);
     }
     function navigateToLocation(location: { lat: number, long: number, name: string, displayName: string }) {
         console.log("Navigating to: " + location.displayName);
         setState(prev => ({ ...prev, is_navigating: true, reached_destination: false }));
         setCurrentLocation(location.displayName);
+
         navigateTo(location.lat, location.long);
     }
 
@@ -551,24 +681,50 @@ export default function CartView() {
 
     useEffect(() => {
         const callback = (message: ROSLIB.Message) => {
-            if (map.current == undefined) return;
-
             const newState = message as VehicleState;
+
             setState(newState);
+
+            /*
+            * Reset ETA/progress when the cart stops navigating.
+            */
+            if (!newState.is_navigating) {
+                setEtaSeconds(null);
+
+                if (newState.reached_destination) {
+                    setTripProgress(100);
+                } else {
+                    setTripProgress(0);
+                }
+            }
 
             if (newState.reached_destination && currentLocation) {
                 speak(`Arrived at ${currentLocation}`);
-                setCurrentLocation(null); // Clear current location when destination is reached
+                setCurrentLocation(null);
             }
 
-            if (newState.reached_destination) {
-                const source = map.current.getSource("remaining_path") as GeoJSONSource;
-                source.setData(LineString([]));
+            /*
+            * Map cleanup requires the map to exist, but the state and ETA
+            * cleanup above should still run even if the map is unavailable.
+            */
+            if (
+                newState.reached_destination &&
+                map.current !== undefined &&
+                map.current !== null
+            ) {
+                const source = map.current.getSource(
+                    "remaining_path"
+                ) as GeoJSONSource | undefined;
+
+                source?.setData(LineString([]));
             }
         };
 
         vehicle_state.subscribe(callback);
-        return () => vehicle_state.unsubscribe(callback);
+
+        return () => {
+            vehicle_state.unsubscribe(callback);
+        };
     }, [speak, currentLocation]);
 
     useEffect(() => {
@@ -662,67 +818,60 @@ export default function CartView() {
             });
             let visual_path_coordinates: number[][] = [];
 
-            visual_path.subscribe((message: ROSLIB.Message) => {
+            gps_global_path.subscribe((message: ROSLIB.Message) => {
                 if (map.current == undefined) return;
 
-                const markers = message as ROSMarkerList;
-                console.log("visual_path Message:")
-                console.log(message)
-                visual_path_coordinates = markers.markers.map((m) => rosToMapCoords(m.pose.position));
-                const source = map.current.getSource("visual_path") as GeoJSONSource;
+                const gpsPath = message as unknown as {
+                    gpspoints?: Array<{
+                        latitude: number;
+                        longitude: number;
+                        elevation?: number;
+                    }>;
+                };
+
+                console.log("gps_global_path Message:");
+                console.log(message);
+
+                // MapLibre/GeoJSON expects [longitude, latitude].
+                const nextCoordinates: number[][] = (gpsPath.gpspoints ?? [])
+                    .map((gpsPoint) => [
+                        gpsPoint.longitude,
+                        gpsPoint.latitude,
+                    ])
+                    .filter(
+                        ([longitude, latitude]) =>
+                            Number.isFinite(longitude) &&
+                            Number.isFinite(latitude)
+                    );
+
+                console.log(
+                    "[gps_global_path] point count:",
+                    nextCoordinates.length
+                );
+
+                // Ignore empty path updates so the route does not flicker.
+                if (nextCoordinates.length === 0) {
+                    console.warn(
+                        "[gps_global_path] Ignoring empty path update"
+                    );
+                    return;
+                }
+
+                visual_path_coordinates = nextCoordinates;
+
+                const source = map.current.getSource(
+                    "visual_path"
+                ) as GeoJSONSource | undefined;
+
+                if (!source) {
+                    console.warn(
+                        "[gps_global_path] Source not ready yet"
+                    );
+                    return;
+                }
                 source.setData(LineString(visual_path_coordinates));
             });
-
-            left_image.subscribe((message: ROSLIB.Message) => {
-                // console.log(message)
-                handle_image_data(message);
-            });
-
-            function handle_image_data(message: ROSLIB.Message) {
-                const image = message as Image;
-                const d = image.data;
-
-                const binaryData = atob(d); // Decode Base64 string into binary data
-
-                const rawData = new Uint8Array(binaryData.length);
-                for (let i = 0; i < binaryData.length; i++) {
-                    rawData[i] = binaryData.charCodeAt(i);
-                }
-
-                const width = 640;
-                const height = 360;
-                const rgbaData = new Uint8ClampedArray(width * height * 4);
-
-                for (let i = 0; i < rawData.length; i += 4) {
-                    const b = rawData[i];      // Blue
-                    const g = rawData[i + 1];  // Green
-                    const r = rawData[i + 2];  // Red
-                    const a = rawData[i + 3];  // Alpha
-
-                    rgbaData[i] = r;        // Red
-                    rgbaData[i + 1] = g;    // Green
-                    rgbaData[i + 2] = b;    // Blue
-                    rgbaData[i + 3] = a;    // Alpha
-                }
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = width;
-                canvas.height = height;
-                if (ctx) {
-                    const actualImageData = ctx.createImageData(width, height);
-                    actualImageData.data.set(rgbaData);
-                    ctx.putImageData(actualImageData, 0, 0);
-                    const base64Image = canvas.toDataURL("image/png");
-
-                    const img = document.getElementById("camera-image") as HTMLImageElement;
-                    img.src = base64Image
-                    img.width = image.width
-                    img.height = image.height
-                }
-
-            }
-
+            
             // Dynamically populate Destinations list with data from locations.json
             locations.forEach((location: { lat: number, long: number, name: string, displayName: string }, index) => {
                 if (map.current == undefined) return;
@@ -742,7 +891,7 @@ export default function CartView() {
                     .addTo(map.current);
 
                 marker.togglePopup();
-                marker.getElement().addEventListener('click', (e) => {
+                marker.getElement().addEventListener('click', (e: MouseEvent) => {
                     e.stopPropagation();
                     console.log('Marker clicked:', location.displayName);
                     handleLocationSelect(location);
@@ -752,11 +901,15 @@ export default function CartView() {
             });
 
 
-            limited_pose.subscribe(function (message: ROSLIB.Message) {
+            gps_send.subscribe(function (message: ROSLIB.Message) {
                 if (map.current == undefined) return;
 
-                const poseWithCovariance = message as PoseWithCovarianceStamped;
-                const [x1, y1] = rosToMapCoords(poseWithCovariance.pose.pose.position);
+                const gpsPoint = message as unknown as {
+                    latitude: number;
+                    longitude: number;
+                };
+                const x1 = gpsPoint.longitude;
+                const y1 = gpsPoint.latitude;
                 const source = map.current.getSource("limited_pose") as GeoJSONSource;
                 source.setData(point(x1, y1));
 
@@ -802,9 +955,54 @@ export default function CartView() {
             }}
         >
             <div id="split">
-                <div id="sidebar">
-                    <img id="camera-image"></img>
-                    <h2>Destinations</h2>
+            <div id="sidebar">
+                {state.is_navigating && (
+                    <div id="trip-info-container">
+                        <Card
+                            className="trip-progress-card"
+                            title="Current Trip"
+                            size="small"
+                        >
+                            <Flex vertical gap="middle">
+                                <div>
+                                    <Flex
+                                        justify="space-between"
+                                        align="center"
+                                    >
+                                        <strong>Trip Progress</strong>
+                                    </Flex>
+
+                                    <Progress
+                                        type="line"
+                                        percent={Math.round(tripProgress)}
+                                        status="active"
+                                    />
+                                </div>
+
+                                <Flex
+                                    justify="space-between"
+                                    align="center"
+                                >
+                                    <span>Estimated time remaining</span>
+                                    <strong>{formatEta(etaSeconds)}</strong>
+                                </Flex>
+
+                                {selectedLocation && (
+                                    <Flex
+                                        justify="space-between"
+                                        align="center"
+                                    >
+                                        <span>Destination</span>
+                                        <strong>
+                                            {selectedLocation.displayName}
+                                        </strong>
+                                    </Flex>
+                                )}
+                            </Flex>
+                        </Card>
+                    </div>
+                )}
+                <h2>Destinations</h2>
                     <ul id="destinations">
                         {locations.map((location, index) => (
                             <li
